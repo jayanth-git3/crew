@@ -28,7 +28,34 @@ from crew.recommendations import (
     WATER_CO2_G_PER_LITER,
     WASTE_CO2_KG_PER_KG,
 )
-from crew.llm_advisor import query_llm_advisor, check_freellm_health
+from crew.llm_advisor import query_llm_advisor, check_freellm_health, DEFAULT_GEMINI_KEY
+
+
+@st.cache_data(show_spinner="Consulting AI Engineering Advisor...")
+def get_cached_ai_report(
+    building_name: str,
+    metric: str,
+    hour: int,
+    reading: float,
+    predicted: float,
+    dev_pct: float,
+    occ: int,
+    cat: str,
+    api_key: str = "",
+    base_url: str = "http://localhost:3001/v1",
+) -> dict:
+    """Caches in-depth LLM advisory calls to avoid repeated latency on UI reruns."""
+    row = {
+        "building_name": building_name,
+        "metric": metric,
+        "hour": hour,
+        "reading": reading,
+        "predicted": predicted,
+        "deviation_pct": dev_pct,
+        "occupancy": occ,
+        "facility_category": cat,
+    }
+    return query_llm_advisor(row, base_url=base_url, api_key=api_key, timeout=5.0)
 
 # ---------------------------------------------------------
 # Streamlit Page Configuration
@@ -259,16 +286,19 @@ def main():
 
         st.divider()
 
-        st.markdown("#### LLM Advisory Gateway")
-        llm_online = check_freellm_health(timeout=0.4)
-        if llm_online:
+        st.markdown("#### AI Advisory Engine")
+        gemini_key = os.environ.get("GEMINI_API_KEY", DEFAULT_GEMINI_KEY)
+        freellm_online = check_freellm_health(timeout=0.4)
+        if gemini_key:
+            st.success("Google Gemini AI Active (Live)")
+        elif freellm_online:
             st.success("FreeLLMAPI Active (port 3001)")
         else:
-            st.caption("FreeLLMAPI offline — using deterministic heuristic fallback")
+            st.caption("AI Offline — Using Deterministic Heuristics")
 
-        with st.expander("Gateway Settings"):
-            custom_url = st.text_input("Gateway Base URL", value="http://localhost:3001/v1")
-            custom_key = st.text_input("Unified API Key (optional)", type="password")
+        with st.expander("API & Gateway Settings"):
+            custom_key = st.text_input("Gemini / FreeLLM API Key", value=gemini_key, type="password")
+            custom_url = st.text_input("FreeLLMAPI Gateway URL", value="http://localhost:3001/v1")
 
         st.markdown("#### Telemetry Management")
         if st.button("Regenerate & Retrain (30k Records)", use_container_width=True):
@@ -569,11 +599,17 @@ def main():
                         st.markdown(f"<span class='badge {b_badge}' style='float:right;'>{badge_text} (+{alert['deviation_pct']:.0f}%)</span>", unsafe_allow_html=True)
 
                     with st.expander("In-Depth AI Engineering Analysis"):
-                        ai_report = query_llm_advisor(
-                            alert,
-                            base_url=custom_url if "custom_url" in locals() else "http://localhost:3001/v1",
+                        ai_report = get_cached_ai_report(
+                            building_name=str(alert['building_name']),
+                            metric=str(alert['metric']),
+                            hour=int(alert['hour']),
+                            reading=float(alert['reading']),
+                            predicted=float(alert['predicted']),
+                            dev_pct=float(alert['deviation_pct']),
+                            occ=int(alert.get('occupancy', 0)),
+                            cat=str(alert.get('facility_category', 'college')),
                             api_key=custom_key if "custom_key" in locals() else "",
-                            timeout=2.0,
+                            base_url=custom_url if "custom_url" in locals() else "http://localhost:3001/v1",
                         )
                         st.markdown(ai_report["analysis"])
                         st.caption(f"Source: {ai_report['source']} | Tier: {ai_report.get('tier', 'Tier 1')}")

@@ -1,12 +1,12 @@
 """LLM Advisory Layer for CREW (Campus Resource Efficiency Watch).
-Connects the Random Forest anomaly detection baseline to an OpenAI-compatible FreeLLMAPI gateway
-(running on http://localhost:3001/v1 or configured endpoint) for deep operational engineering analysis.
-Includes instant deterministic fallback to ensure zero downtime when the gateway is offline.
+Connects Random Forest anomaly detections to Google Gemini (Direct API) or a local FreeLLMAPI gateway.
+Includes instant deterministic fallback to ensure zero downtime when offline.
 """
 from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import urllib.request
 import urllib.error
 from typing import Dict, Any, Optional
@@ -19,8 +19,31 @@ from crew.config import (
 )
 from crew.recommendations import diagnose_root_cause, compute_quantified_savings
 
+
+def _load_env_secrets() -> None:
+    """Loads environment variables from local .env files if present."""
+    candidates = [
+        Path(".env"),
+        Path("own/crew/.env"),
+        Path(__file__).parent.parent.parent / ".env",
+    ]
+    for c in candidates:
+        if c.is_file():
+            try:
+                for line in c.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip())
+            except Exception:
+                pass
+
+
+_load_env_secrets()
+
 DEFAULT_FREELLM_URL = os.environ.get("FREELLM_BASE_URL", "http://localhost:3001/v1")
 DEFAULT_FREELLM_KEY = os.environ.get("FREELLM_API_KEY", "")
+DEFAULT_GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 
 def format_anomaly_prompt(row: Dict[str, Any] | pd.Series) -> str:
@@ -58,7 +81,28 @@ def format_anomaly_prompt(row: Dict[str, Any] | pd.Series) -> str:
     return prompt
 
 
-def check_freellm_health(base_url: str = DEFAULT_FREELLM_URL, timeout: float = 1.0) -> bool:
+def query_gemini_direct(prompt: str, api_key: str, timeout: float = 4.0) -> Optional[str]:
+    """Queries Google Gemini API directly using the user's API key."""
+    if not api_key:
+        return None
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={api_key}"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 250},
+    }
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                body = json.loads(resp.read().decode("utf-8"))
+                return body["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception:
+        pass
+    return None
+
+
+def check_freellm_health(base_url: str = DEFAULT_FREELLM_URL, timeout: float = 0.5) -> bool:
     """Probes the FreeLLMAPI gateway models endpoint to check if the server is active."""
     url = f"{base_url.rstrip('/')}/models"
     try:
@@ -72,15 +116,34 @@ def check_freellm_health(base_url: str = DEFAULT_FREELLM_URL, timeout: float = 1
 def query_llm_advisor(
     row: Dict[str, Any] | pd.Series,
     base_url: str = DEFAULT_FREELLM_URL,
-    api_key: str = DEFAULT_FREELLM_KEY,
+    api_key: str = "",
     timeout: float = 4.0,
     model: str = "auto",
 ) -> Dict[str, Any]:
-    """Queries FreeLLMAPI gateway for in-depth engineering analysis with deterministic fallback."""
+    """Queries Google Gemini or FreeLLMAPI gateway for in-depth engineering analysis with deterministic fallback."""
     savings = compute_quantified_savings(row)
     fallback_diag = diagnose_root_cause(row)
     prompt = format_anomaly_prompt(row)
 
+    # 1. Try Direct Google Gemini if key is provided or present in environment
+    gemini_key = api_key if (api_key and (api_key.startswith("AQ.") or api_key.startswith("AIza"))) else os.environ.get("GEMINI_API_KEY", DEFAULT_GEMINI_KEY)
+    if gemini_key:
+        gemini_text = query_gemini_direct(prompt, gemini_key, timeout=timeout)
+        if gemini_text:
+            return {
+                "source": "google_gemini_live",
+                "status": "success",
+                "analysis": gemini_text,
+                "root_cause": fallback_diag["root_cause"],
+                "action": fallback_diag["action"],
+                "priority": fallback_diag["priority"],
+                "tier": fallback_diag["tier"],
+                "excess_units": savings["excess_units"],
+                "unit": savings["unit"],
+                "hourly_loss_inr": savings["hourly_loss_inr"],
+            }
+
+    # 2. Try FreeLLMAPI gateway
     url = f"{base_url.rstrip('/')}/chat/completions"
     headers = {
         "Content-Type": "application/json",
@@ -127,7 +190,7 @@ def query_llm_advisor(
     except Exception:
         pass
 
-    # Seamless deterministic fallback
+    # 3. Deterministic Heuristic Fallback
     summary_text = (
         f"Root Cause: {fallback_diag['root_cause']}\n\n"
         f"Remediation: {fallback_diag['action']}\n\n"
