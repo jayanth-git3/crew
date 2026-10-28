@@ -120,16 +120,26 @@ def test_building_health_matrix_structure():
 
 
 def test_no_encoding_artifacts_in_app():
-    """Verify app.py source contains no mojibake encoding artifacts."""
+    """Verify app.py source contains no mojibake encoding artifacts and adheres to required titles."""
     from pathlib import Path
     app_path = Path("src/crew/app.py")
     if not app_path.exists():
         app_path = Path("own/crew/src/crew/app.py")
     text = app_path.read_text(encoding="utf-8")
 
-    forbidden = ["ΓÜí", "≡ƒÅó", "Γé╣", "ΓÖ╗", "≡ƒÆº"]
+    forbidden = [
+        "ΓÜí", "≡ƒÅó", "Γé╣", "ΓÖ╗", "≡ƒÆº",
+        "CREW Command Center",
+        "Singular ML Model Active",
+        "Interactive Multi-Domain ROI and Big Organization Simulator",
+        "Total Dataset: 30,000",
+    ]
     for artifact in forbidden:
-        assert artifact not in text, f"Found corrupted encoding artifact: {artifact}"
+        assert artifact not in text, f"Found forbidden text or corrupted artifact: {artifact}"
+
+    # Verify required title
+    assert "Crew Campus ISO Efficiency Watch" in text
+    assert "Crew Dashboard" in text
 
 
 def test_app_renders_without_exceptions():

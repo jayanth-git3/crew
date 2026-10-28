@@ -1,5 +1,4 @@
-"""CREW: Campus Resource Efficiency Watch — Operational Decarbonization Command Center.
-AI-Powered Multi-Domain Telemetry Analyzer & Decision Support Dashboard.
+"""CREW: Campus Resource Efficiency Watch — ISO Decarbonization & Operational Intelligence.
 """
 from __future__ import annotations
 
@@ -29,24 +28,25 @@ from crew.recommendations import (
     WATER_CO2_G_PER_LITER,
     WASTE_CO2_KG_PER_KG,
 )
+from crew.llm_advisor import query_llm_advisor, check_freellm_health
 
 # ---------------------------------------------------------
 # Streamlit Page Configuration
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="CREW | Campus Resource Efficiency Watch",
+    page_title="Crew Campus ISO Efficiency Watch",
     page_icon="•",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ---------------------------------------------------------
-# Minimal, Utilitarian Design System & CSS
+# Minimal, High-Contrast Design System
 # ---------------------------------------------------------
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
         padding-bottom: 2rem;
     }
 
@@ -54,7 +54,7 @@ st.markdown("""
         background: #0F172A;
         border: 1px solid #1E293B;
         border-radius: 8px;
-        padding: 20px 24px;
+        padding: 18px 24px;
         margin-bottom: 18px;
         color: #F8FAFC;
     }
@@ -64,29 +64,21 @@ st.markdown("""
         letter-spacing: -0.3px;
         color: #FFFFFF;
         margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .crew-subtitle {
-        font-size: 0.88rem;
-        color: #94A3B8;
-        margin-top: 6px;
     }
 
     .kpi-card {
         background: #FFFFFF;
         border-radius: 8px;
         padding: 14px 18px;
-        border: 1px solid #E2E8F0;
+        border: 1px solid #CBD5E1;
         margin-bottom: 12px;
     }
     .kpi-label {
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        color: #64748B;
+        color: #475569;
         margin-bottom: 4px;
     }
     .kpi-value {
@@ -98,14 +90,14 @@ st.markdown("""
     }
     .kpi-delta {
         font-size: 0.8rem;
-        font-weight: 500;
+        font-weight: 600;
         margin-top: 4px;
-        color: #64748B;
+        color: #475569;
     }
 
     .building-card {
         background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        border: 1px solid #CBD5E1;
         border-radius: 8px;
         padding: 14px 16px;
         margin-bottom: 12px;
@@ -113,10 +105,10 @@ st.markdown("""
 
     .badge {
         display: inline-block;
-        padding: 2px 8px;
+        padding: 3px 8px;
         border-radius: 4px;
-        font-size: 0.72rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 700;
         letter-spacing: 0.3px;
         text-transform: uppercase;
     }
@@ -135,15 +127,10 @@ st.markdown("""
         color: #166534;
         border: 1px solid #86EFAC;
     }
-    .badge-neutral {
-        background-color: #F8FAFC;
-        color: #475569;
-        border: 1px solid #E2E8F0;
-    }
 
     .action-tier-card {
         background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        border: 1px solid #CBD5E1;
         border-radius: 8px;
         padding: 16px;
         margin-bottom: 14px;
@@ -217,22 +204,12 @@ def main():
     # Sidebar Controls & Scope Filtering
     # -----------------------------------------------------
     with st.sidebar:
-        st.markdown("### CREW Command Center")
+        st.markdown("### Crew Dashboard")
         st.caption("Campus Resource Efficiency Watch")
-
-        st.markdown(
-            """
-            <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:6px; padding:8px 12px; margin-bottom:12px;">
-                <span style="color:#166534; font-weight:600; font-size:0.8rem;">Singular ML Model Active</span><br/>
-                <span style="color:#15803D; font-size:0.75rem;">Multi-Domain: Energy • Water • Waste</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
         if detector.metrics:
             st.markdown("##### Model Accuracy (R² Benchmark)")
-            overall_r2 = detector.metrics.get("overall", {}).get("r2", 0.9986)
+            overall_r2 = detector.metrics.get("overall", {}).get("r2", 0.9984)
             st.caption(f"Singular Model: **{overall_r2 * 100:.2f}%** fit across 30,000 records")
             with st.expander("Domain-Specific Scores"):
                 for m in ["energy", "water", "waste"]:
@@ -282,6 +259,17 @@ def main():
 
         st.divider()
 
+        st.markdown("#### LLM Advisory Gateway")
+        llm_online = check_freellm_health(timeout=0.4)
+        if llm_online:
+            st.success("FreeLLMAPI Active (port 3001)")
+        else:
+            st.caption("FreeLLMAPI offline — using deterministic heuristic fallback")
+
+        with st.expander("Gateway Settings"):
+            custom_url = st.text_input("Gateway Base URL", value="http://localhost:3001/v1")
+            custom_key = st.text_input("Unified API Key (optional)", type="password")
+
         st.markdown("#### Telemetry Management")
         if st.button("Regenerate & Retrain (30k Records)", use_container_width=True):
             st.cache_data.clear()
@@ -292,16 +280,6 @@ def main():
             new_detector.fit(fresh_df)
             new_detector.save("models/detector.joblib")
             st.rerun()
-
-        st.markdown(
-            f"""
-            <div style="margin-top:16px; font-size:0.75rem; color:#94A3B8; text-align:center;">
-                IEEE 5-Hour Hackathon • {CAMPUS_NAME}<br/>
-                Total Dataset: {len(raw_df):,} records
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
     # -----------------------------------------------------
     # Run Detection & Compute Scoped Analytics (Cached)
@@ -338,25 +316,15 @@ def main():
     recommendations_df = generate_recommendations_for_flagged(filtered_df, limit=50)
 
     # -----------------------------------------------------
-    # Executive Header Banner
+    # Top Bar Header: Clean Title & Facility Score Badge
     # -----------------------------------------------------
     st.markdown(f"""
     <div class="crew-header">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div class="crew-title">Crew Campus ISO Efficiency Watch</div>
             <div>
-                <div class="crew-title">
-                    <span>CREW</span>
-                    <span style="font-size:1.05rem; font-weight:400; color:#94A3B8;">| Campus Resource Efficiency Watch</span>
-                </div>
-                <div class="crew-subtitle">
-                    <strong>Facility Target:</strong> {CAMPUS_NAME} &nbsp;•&nbsp; 
-                    <strong>Multi-Domain:</strong> Energy • Water • Waste &nbsp;•&nbsp;
-                    <strong>ML Baseline:</strong> Singular Unified Model (±{threshold}% Sensitivity)
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <span class="badge" style="background:#0F766E; color:#CCFBF1; font-size:0.85rem; padding:6px 12px;">
-                    Facility Health Score: {campus_stats['health_score']}/100 ({campus_stats['grade']})
+                <span class="badge" style="background:#0F766E; color:#CCFBF1; font-size:0.95rem; padding:8px 16px; border:1px solid #14B8A6;">
+                    Facility Score: {campus_stats['health_score']}/100 &nbsp;|&nbsp; Grade {campus_stats['grade']}
                 </span>
             </div>
         </div>
@@ -371,7 +339,7 @@ def main():
     with kpi_col1:
         st.markdown(f"""
         <div class="kpi-card" style="border-top: 3px solid #4F46E5;">
-            <div class="kpi-label">Health Score</div>
+            <div class="kpi-label">Facility Score</div>
             <div class="kpi-value">{campus_stats['health_score']}<span style="font-size:1rem; font-weight:500; color:#64748B;">/100</span></div>
             <div class="kpi-delta">Grade: {campus_stats['grade']} • {campus_stats['status']}</div>
         </div>
@@ -414,7 +382,7 @@ def main():
         """, unsafe_allow_html=True)
 
     # -----------------------------------------------------
-    # 4 Structured Tabs: Clean Technical Layout
+    # 4 Structured Tabs
     # -----------------------------------------------------
     tab1, tab2, tab3, tab4 = st.tabs([
         "1. Facility Health & Alerts",
@@ -424,7 +392,7 @@ def main():
     ])
 
     # =====================================================
-    # TAB 1: FACILITY HEALTH & ALERTS
+    # TAB 1: FACILITY HEALTH & IN-DEPTH ALERTS
     # =====================================================
     with tab1:
         st.markdown("#### Campus Facility Status Matrix")
@@ -436,7 +404,7 @@ def main():
             with col_target:
                 is_crit = "Critical" in b_row["status"]
                 badge_class = "badge-critical" if is_crit else ("badge-warning" if "Warning" in b_row["status"] else "badge-success")
-                card_border = "#FCA5A5" if is_crit else ("#FCD34D" if "Warning" in b_row["status"] else "#E2E8F0")
+                card_border = "#FCA5A5" if is_crit else ("#FCD34D" if "Warning" in b_row["status"] else "#CBD5E1")
 
                 st.markdown(f"""
                 <div class="building-card" style="border-left: 3px solid {card_border};">
@@ -462,102 +430,153 @@ def main():
 
         st.divider()
 
-        c_heat, c_feed = st.columns([1.1, 0.9])
+        st.markdown("#### In-Depth Inefficiency Heatmap & Diurnal Spike Profile")
+        st.caption("Hover over any cell to inspect recorded reading, baseline target, deviation %, and excess financial burn rate.")
+
+        c_heat, c_spike = st.columns([1.1, 0.9])
 
         with c_heat:
-            st.markdown("#### 24-Hour Inefficiency Heatmap")
-            st.caption("Mean % deviation above baseline by facility and hour of the day.")
-
-            pivot_df = filtered_df.pivot_table(
-                index="building_name",
-                columns="hour",
-                values="deviation_pct",
-                aggfunc="mean",
+            # Build pivot tables with rich metrics for custom hover
+            pivot_dev = filtered_df.pivot_table(
+                index="building_name", columns="hour", values="deviation_pct", aggfunc="mean"
+            ).fillna(0)
+            pivot_read = filtered_df.pivot_table(
+                index="building_name", columns="hour", values="reading", aggfunc="mean"
+            ).fillna(0)
+            pivot_pred = filtered_df.pivot_table(
+                index="building_name", columns="hour", values="predicted", aggfunc="mean"
             ).fillna(0)
 
             for h in range(24):
-                if h not in pivot_df.columns:
-                    pivot_df[h] = 0.0
-            pivot_df = pivot_df[sorted(pivot_df.columns)]
+                if h not in pivot_dev.columns:
+                    pivot_dev[h] = 0.0
+                    pivot_read[h] = 0.0
+                    pivot_pred[h] = 0.0
 
-            fig_heat = px.imshow(
-                pivot_df,
-                labels=dict(x="Hour of Day (24h)", y="Facility", color="Deviation %"),
-                x=[f"{h:02d}:00" for h in pivot_df.columns],
-                y=pivot_df.index,
-                color_continuous_scale=[
+            pivot_dev = pivot_dev[sorted(pivot_dev.columns)]
+            pivot_read = pivot_read[sorted(pivot_read.columns)]
+            pivot_pred = pivot_pred[sorted(pivot_pred.columns)]
+
+            # Calculate burn rate matrix
+            rates_map = {"energy": ENERGY_COST_PER_KWH, "water": WATER_COST_PER_LITER, "waste": WASTE_COST_PER_KG}
+            curr_rate = ENERGY_COST_PER_KWH if "Energy" in metric_choice else (WATER_COST_PER_LITER if "Water" in metric_choice else (WASTE_COST_PER_KG if "Waste" in metric_choice else 8.50))
+            pivot_burn = (pivot_read - pivot_pred).clip(lower=0.0) * curr_rate
+
+            custom_data = np.dstack((pivot_pred.values, pivot_read.values, pivot_burn.values))
+
+            fig_heat = go.Figure(data=go.Heatmap(
+                z=pivot_dev.values,
+                x=[f"{h:02d}:00" for h in pivot_dev.columns],
+                y=pivot_dev.index.tolist(),
+                customdata=custom_data,
+                hovertemplate=(
+                    "<b>%{y}</b><br>"
+                    "Hour: %{x}<br>"
+                    "Baseline Target: %{customdata[0]:.1f}<br>"
+                    "Recorded Reading: %{customdata[1]:.1f}<br>"
+                    "Baseline Deviation: <b>+%{z:.1f}%</b><br>"
+                    "Excess Waste Rate: <b>₹%{customdata[2]:.1f}/hr</b>"
+                    "<extra></extra>"
+                ),
+                colorscale=[
                     [0.0, "#F8FAFC"],
                     [0.2, "#CBD5E1"],
                     [0.35, "#FCD34D"],
                     [0.55, "#F87171"],
                     [1.0, "#991B1B"],
                 ],
-                origin="upper",
-                aspect="auto",
-                template="plotly_white",
-            )
+                colorbar=dict(title="Dev %", len=0.8),
+            ))
             fig_heat.update_layout(
                 margin=dict(l=10, r=10, t=10, b=10),
                 height=340,
                 xaxis_title="Hour of Day",
                 yaxis_title="",
-                coloraxis_colorbar=dict(title="Dev %", len=0.8),
+                template="plotly_white",
             )
             st.plotly_chart(fig_heat, use_container_width=True)
 
-        with c_feed:
-            st.markdown("#### Priority Inefficiency Alerts")
-            st.caption("Active anomalies detected across Energy, Water, and Waste.")
+        with c_spike:
+            # Accompanying Hourly Waste Spike distribution curve
+            hourly_spikes = filtered_df.groupby("hour").apply(
+                lambda g: ((g["reading"] - g["predicted"]).clip(lower=0) * g["metric"].map(rates_map).fillna(8.50)).sum()
+            ).reset_index(name="excess_waste_inr")
 
-            if flagged_df.empty:
-                st.success("No anomalies detected within current filter criteria.")
-            else:
-                alert_filter = st.radio(
-                    "Filter Alerts By:",
-                    ["All Flags", "Critical Only", "Energy Only", "Water Only", "Waste Only"],
-                    horizontal=True,
-                    label_visibility="collapsed",
-                )
+            fig_spike = go.Figure()
+            fig_spike.add_trace(go.Bar(
+                x=[f"{h:02d}:00" for h in hourly_spikes["hour"]],
+                y=hourly_spikes["excess_waste_inr"],
+                marker_color="#DC2626",
+                opacity=0.85,
+                hovertemplate="Hour %{x}<br>Campus Waste Burn: <b>₹%{y:,.0f}</b><extra></extra>",
+            ))
+            fig_spike.update_layout(
+                title="Hourly Financial Waste Spikes (Campus-Wide)",
+                xaxis_title="Hour of Day",
+                yaxis_title="Total Excess Waste (₹)",
+                margin=dict(l=10, r=10, t=35, b=10),
+                height=340,
+                template="plotly_white",
+            )
+            st.plotly_chart(fig_spike, use_container_width=True)
 
-                feed_df = flagged_df.copy()
-                if alert_filter == "Critical Only":
-                    feed_df = feed_df[feed_df["deviation_pct"] > 50]
-                elif alert_filter == "Energy Only":
-                    feed_df = feed_df[feed_df["metric"] == "energy"]
-                elif alert_filter == "Water Only":
-                    feed_df = feed_df[feed_df["metric"] == "water"]
-                elif alert_filter == "Waste Only":
-                    feed_df = feed_df[feed_df["metric"] == "waste"]
+        st.divider()
 
-                top_alerts = feed_df.sort_values(by="deviation_pct", ascending=False).head(5)
+        st.markdown("#### Priority Inefficiency Alerts & AI Engineering Audit")
+        st.caption("Active anomalies detected across Energy, Water, and Waste paired with in-depth engineering root-cause analysis.")
 
-                for _, alert in top_alerts.iterrows():
-                    m_str = alert["metric"]
-                    m_unit = "kWh" if m_str == "energy" else ("L" if m_str == "water" else "kg")
-                    is_severe = alert["deviation_pct"] > 60
-                    b_badge = "badge-critical" if is_severe else "badge-warning"
-                    badge_text = "CRITICAL" if is_severe else "WARNING"
+        if flagged_df.empty:
+            st.success("No anomalies detected within current filter criteria.")
+        else:
+            alert_filter = st.radio(
+                "Filter Alerts By:",
+                ["All Flags", "Critical Only", "Energy Only", "Water Only", "Waste Only"],
+                horizontal=True,
+                label_visibility="collapsed",
+            )
 
-                    rate = ENERGY_COST_PER_KWH if m_str == "energy" else (WATER_COST_PER_LITER if m_str == "water" else WASTE_COST_PER_KG)
-                    hourly_loss = (alert["reading"] - alert["predicted"]) * rate
+            feed_df = flagged_df.copy()
+            if alert_filter == "Critical Only":
+                feed_df = feed_df[feed_df["deviation_pct"] > 50]
+            elif alert_filter == "Energy Only":
+                feed_df = feed_df[feed_df["metric"] == "energy"]
+            elif alert_filter == "Water Only":
+                feed_df = feed_df[feed_df["metric"] == "water"]
+            elif alert_filter == "Waste Only":
+                feed_df = feed_df[feed_df["metric"] == "waste"]
 
-                    st.markdown(f"""
-                    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:6px; padding:10px 12px; margin-bottom:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:600; font-size:0.86rem; color:#1E293B;">
-                                {alert['building_name']} <span style="font-size:0.75rem; color:#64748B;">({m_str.upper()})</span>
-                            </span>
-                            <span class="badge {b_badge}">{badge_text} (+{alert['deviation_pct']:.0f}%)</span>
-                        </div>
-                        <div style="font-size:0.78rem; color:#64748B; margin-top:3px;">
-                            Hour {alert['hour']:02d}:00 &nbsp;•&nbsp; 
-                            Recorded: <strong>{alert['reading']:.1f} {m_unit}</strong> vs Baseline: <strong>{alert['predicted']:.1f} {m_unit}</strong>
-                        </div>
-                        <div style="margin-top:4px; font-size:0.75rem; color:#B91C1C; font-weight:600;">
-                            Estimated Financial Burn Rate: ₹{hourly_loss:.1f}/hr excess waste
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+            top_alerts = feed_df.sort_values(by="deviation_pct", ascending=False).head(5)
+
+            for idx, alert in top_alerts.iterrows():
+                m_str = alert["metric"]
+                m_unit = "kWh" if m_str == "energy" else ("L" if m_str == "water" else "kg")
+                is_severe = alert["deviation_pct"] > 60
+                b_badge = "badge-critical" if is_severe else "badge-warning"
+                badge_text = "CRITICAL" if is_severe else "WARNING"
+
+                rate = ENERGY_COST_PER_KWH if m_str == "energy" else (WATER_COST_PER_LITER if m_str == "water" else WASTE_COST_PER_KG)
+                hourly_loss = (alert["reading"] - alert["predicted"]) * rate
+
+                with st.container(border=True):
+                    head_c1, head_c2 = st.columns([3, 1])
+                    with head_c1:
+                        st.markdown(f"**{alert['building_name']}** ({m_str.upper()}) &nbsp;•&nbsp; Hour {alert['hour']:02d}:00")
+                        st.caption(
+                            f"Recorded: **{alert['reading']:.1f} {m_unit}** vs Baseline: **{alert['predicted']:.1f} {m_unit}** "
+                            f"| Burn Rate: **₹{hourly_loss:.1f}/hr excess**"
+                        )
+                    with head_c2:
+                        st.markdown(f"<span class='badge {b_badge}' style='float:right;'>{badge_text} (+{alert['deviation_pct']:.0f}%)</span>", unsafe_allow_html=True)
+
+                    with st.expander("In-Depth AI Engineering Analysis"):
+                        ai_report = query_llm_advisor(
+                            alert,
+                            base_url=custom_url if "custom_url" in locals() else "http://localhost:3001/v1",
+                            api_key=custom_key if "custom_key" in locals() else "",
+                            timeout=2.0,
+                        )
+                        st.markdown(ai_report["analysis"])
+                        st.caption(f"Source: {ai_report['source']} | Tier: {ai_report.get('tier', 'Tier 1')}")
 
     # =====================================================
     # TAB 2: TELEMETRY DIAGNOSTICS & MULTI-DOMAIN CURVES
@@ -566,7 +585,7 @@ def main():
         st.markdown("#### Facility Telemetry Drill-Down")
         st.caption("Telemetry curves comparing recorded measurements vs singular model baseline.")
 
-        drill_col1, drill_col2 = st.columns([1.5, 1])
+        drill_col1, drill_col2 = st.columns([1.4, 1.1])
         with drill_col1:
             drill_building = st.selectbox(
                 "Campus Facility:",
@@ -576,15 +595,16 @@ def main():
 
         b_profile = next((b for b in BUILDINGS if b["building_name"] == drill_building), {})
         with drill_col2:
-            st.markdown(f"""
-            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:10px 12px; margin-top:4px; font-size:0.78rem;">
-                <strong>Category:</strong> {b_profile.get('facility_category', 'N/A').title()} ({b_profile.get('building_type', 'N/A').capitalize()}) &nbsp;|&nbsp;
-                <strong>Capacity:</strong> {b_profile.get('capacity', 'N/A')} occupants<br/>
-                <strong>Base Load:</strong> {b_profile.get('base_energy', 'N/A')} kWh &nbsp;|&nbsp;
-                {b_profile.get('base_water', 'N/A')} L/hr &nbsp;|&nbsp;
-                {b_profile.get('base_waste', 'N/A')} kg/hr
-            </div>
-            """, unsafe_allow_html=True)
+            # High-contrast theme-compatible container
+            with st.container(border=True):
+                st.markdown(f"**{drill_building}** Profile")
+                info_c1, info_c2 = st.columns(2)
+                with info_c1:
+                    st.caption(f"Category: **{b_profile.get('facility_category', 'N/A').title()}**")
+                    st.caption(f"Capacity: **{b_profile.get('capacity', 'N/A')} occupants**")
+                with info_c2:
+                    st.caption(f"Base Electrical: **{b_profile.get('base_energy', 'N/A')} kWh**")
+                    st.caption(f"Base Water: **{b_profile.get('base_water', 'N/A')} L/hr** | Waste: **{b_profile.get('base_waste', 'N/A')} kg/hr**")
 
         st.markdown("<br/>", unsafe_allow_html=True)
 
@@ -750,20 +770,6 @@ def main():
         if recommendations_df.empty:
             st.info("No active anomalies requiring intervention under current filter scope.")
         else:
-            st.markdown(
-                """
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:14px 18px; margin-bottom:16px;">
-                    <div style="font-weight:600; font-size:0.95rem; color:#1E293B; margin-bottom:2px;">
-                        Interactive Multi-Domain ROI & Decarbonization Simulator
-                    </div>
-                    <div style="font-size:0.8rem; color:#64748B;">
-                        Select interventions to deploy across Energy, Water, and Waste to simulate budget reclaim and carbon reduction.
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
             sim_col1, sim_col2 = st.columns([1.2, 1])
 
             with sim_col1:
@@ -824,29 +830,15 @@ def main():
             payback_days = (sim_capex_inr / (sim_monthly_savings_inr / 30.0)) if sim_monthly_savings_inr > 0 else 0.0
 
             with sim_col2:
-                st.markdown(f"""
-                <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; padding:14px;">
-                    <div style="font-size:0.75rem; font-weight:700; color:#64748B; text-transform:uppercase;">Simulated Implementation Impact</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748B;">Monthly Savings:</span><br/>
-                            <strong style="font-size:1.2rem; color:#059669;">₹{sim_monthly_savings_inr:,.0f}</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748B;">Annual Budget Reclaimed:</span><br/>
-                            <strong style="font-size:1.2rem; color:#1E293B;">₹{sim_annual_savings_inr:,.0f}</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748B;">CO₂ Abatement:</span><br/>
-                            <strong style="font-size:1.05rem; color:#059669;">{sim_monthly_co2_kg:,.0f} kg/mo</strong>
-                        </div>
-                        <div>
-                            <span style="font-size:0.75rem; color:#64748B;">Payback Horizon:</span><br/>
-                            <strong style="font-size:1.05rem; color:#0284C7;">{payback_days:.1f} Days</strong>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.caption("SIMULATED IMPLEMENTATION IMPACT")
+                    sc1, sc2 = st.columns(2)
+                    with sc1:
+                        st.metric("Monthly Savings", f"₹{sim_monthly_savings_inr:,.0f}")
+                        st.metric("CO₂ Abatement", f"{sim_monthly_co2_kg:,.0f} kg/mo")
+                    with sc2:
+                        st.metric("Annual Budget Reclaimed", f"₹{sim_annual_savings_inr:,.0f}")
+                        st.metric("Payback Horizon", f"{payback_days:.1f} Days")
 
             st.divider()
 
@@ -939,12 +931,12 @@ def main():
             st.markdown("""
             ```mermaid
             flowchart TD
-                A["3x 10k Bengaluru Datasets<br/>Energy, Water, Waste"] --> B["Singular Unified RandomForestRegressor"]
+                A["College Telemetry Datasets<br/>Energy, Water, Waste"] --> B["Singular Unified RandomForestRegressor"]
                 B --> C{"Actual vs Baseline > 20%?"}
-                C -- Inefficiency Flagged --> D["Domain Diagnostic & Savings Engine"]
+                C -- Inefficiency Flagged --> D["LLM Facility Advisor & Heuristics"]
                 C -- Normal Load --> E["Operational Baseline Log"]
                 D --> F["Quantified Action Items<br/>INR & CO2 Savings"]
-                D --> G["Streamlit Command Center"]
+                D --> G["Crew Dashboard"]
                 F --> G
             ```
             """)
@@ -955,7 +947,7 @@ def main():
             - **Multi-Domain Baseline Training**: A singular unified `RandomForestRegressor` trained across 30,000 records of Energy, Water, and Waste telemetry, capturing cross-resource interactions.
             - **Feature Representation**: Categorical facility features (`building_id`, `building_type`, `facility_category`, `metric`) combined with diurnal cycle (`hour` 0-23) and continuous real-time headcount (`occupancy`).
             - **Empirical Accuracy (80/20 Baseline Test Split)**:
-              - **Overall Singular Model**: $R^2 = {detector.metrics.get('overall', {}).get('r2', 0.9986):.4f}$
+              - **Overall Singular Model**: $R^2 = {detector.metrics.get('overall', {}).get('r2', 0.9984):.4f}$
               - **Energy Regressor**: $R^2 = {detector.metrics.get('energy', {}).get('r2', 0.9945):.4f}$ | MAE = {detector.metrics.get('energy', {}).get('mae', 1.62)} kWh
               - **Water Regressor**: $R^2 = {detector.metrics.get('water', {}).get('r2', 0.9978):.4f}$ | MAE = {detector.metrics.get('water', {}).get('mae', 28.55)} L
               - **Waste Regressor**: $R^2 = {detector.metrics.get('waste', {}).get('r2', 0.9964):.4f}$ | MAE = {detector.metrics.get('waste', {}).get('mae', 0.26)} kg
