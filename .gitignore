@@ -15,3 +15,7 @@ models/*.joblib
 models/*.pkl
 *.joblib
 *.pkl
+
+# Environment variables and secrets
+.env
+.env.*
