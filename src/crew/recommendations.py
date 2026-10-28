@@ -208,14 +208,28 @@ def generate_recommendation(
 
 
 def generate_recommendations_for_flagged(df: pd.DataFrame, limit: int = 50) -> pd.DataFrame:
-    """Batch generates recommendations for all flagged rows, sorted by highest financial loss."""
-    flagged = df[df.get("flagged", False)].copy()
+    """Batch generates recommendations for top flagged rows, sorted by highest financial loss."""
+    if "flagged" not in df.columns:
+        return pd.DataFrame()
+    flagged = df[df["flagged"]].copy()
     if flagged.empty:
         return pd.DataFrame()
 
-    recs = [generate_recommendation(row) for _, row in flagged.iterrows()]
+    rates = {
+        "energy": ENERGY_COST_PER_KWH,
+        "water": WATER_COST_PER_LITER,
+        "waste": WASTE_COST_PER_KG,
+    }
+    excess = (flagged["reading"] - flagged["predicted"]).clip(lower=0.0)
+    metric_rates = flagged["metric"].map(rates).fillna(ENERGY_COST_PER_KWH)
+    flagged["_sort_loss"] = excess * metric_rates
+
+    top_flagged = flagged.nlargest(limit, "_sort_loss")
+    recs = [generate_recommendation(row) for _, row in top_flagged.iterrows()]
     recs_df = pd.DataFrame(recs)
-    return recs_df.sort_values(by="hourly_loss_inr", ascending=False).head(limit)
+    if not recs_df.empty:
+        return recs_df.sort_values(by="hourly_loss_inr", ascending=False).reset_index(drop=True)
+    return recs_df
 
 
 def calculate_campus_health_score(analyzed_df: pd.DataFrame) -> Dict[str, Any]:
