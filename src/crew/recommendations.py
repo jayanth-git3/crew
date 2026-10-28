@@ -1,16 +1,17 @@
 """Recommendation Layer for CREW (Campus Resource Efficiency Watch).
-Computes quantified financial & resource savings per flagged anomaly using
-deterministic engineering heuristics, with a pluggable slot for free-tier LLM enhancement.
+Computes quantified financial & resource savings per flagged anomaly across
+Energy (kWh), Water (Liters), and Waste (kg) using deterministic domain heuristics.
 
 Deliverable: Function returning a quantified recommendation dictionary per flagged row.
 """
 from __future__ import annotations
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 import pandas as pd
 
 from crew.config import (
     ENERGY_COST_PER_KWH,
     WATER_COST_PER_LITER,
+    WASTE_COST_PER_KG,
 )
 
 
@@ -26,14 +27,16 @@ def compute_quantified_savings(row: Dict[str, Any] | pd.Series) -> Dict[str, Any
     if metric == "energy":
         rate = ENERGY_COST_PER_KWH
         unit = "kWh"
-        hourly_loss_inr = round(excess * rate, 2)
-    else:  # water
+    elif metric == "water":
         rate = WATER_COST_PER_LITER
         unit = "Liters"
-        hourly_loss_inr = round(excess * rate, 2)
+    else:  # waste (kg)
+        rate = WASTE_COST_PER_KG
+        unit = "kg"
 
-    # Projected extrapolated 30-day savings if fixed
-    projected_monthly_savings_inr = round(hourly_loss_inr * 24 * 30 * 0.40, 2)  # assuming ~10h avg anomaly duration
+    hourly_loss_inr = round(excess * rate, 2)
+    # Projected extrapolated 30-day savings assuming ~8h average daily anomaly duration
+    projected_monthly_savings_inr = round(hourly_loss_inr * 8 * 30, 2)
 
     return {
         "excess_units": excess,
@@ -72,6 +75,26 @@ def diagnose_root_cause(row: Dict[str, Any] | pd.Series) -> Dict[str, str]:
                 "priority": "MEDIUM",
             }
 
+    elif metric == "waste":
+        if b_type == "canteen":
+            return {
+                "root_cause": "Bulk kitchen batch food spoilage, excess plate leftovers, and unsegregated wet/dry waste dumping.",
+                "action": "Install commercial on-site biogas composter; audit kitchen meal prep portions; partner with Bengaluru food recovery NGO.",
+                "priority": "CRITICAL - HIGH ESG IMPACT",
+            }
+        elif b_type == "hostel":
+            return {
+                "root_cause": "Unsegregated delivery packaging and consumer food containers accumulating in hostel waste bins.",
+                "action": "Establish floor-level segregated 2-bin disposal (organic vs recyclable) and partner with BBMP dry waste recyclers.",
+                "priority": "MEDIUM",
+            }
+        else:
+            return {
+                "root_cause": "Unregulated electronic packaging and component scrap in maker & computer labs.",
+                "action": "Deploy dedicated electronic waste bins with an authorized KSPCB e-waste recycler.",
+                "priority": "MEDIUM",
+            }
+
     else:  # energy
         if occupancy <= 15 and (hour >= 20 or hour <= 6):
             return {
@@ -97,11 +120,7 @@ def generate_recommendation(
     row: Dict[str, Any] | pd.Series,
     llm_client: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Generates an end-to-end quantified recommendation for a single flagged anomaly.
-
-    Plug-and-play architecture: uses deterministic heuristics by default,
-    and seamlessly delegates to LLM when configured.
-    """
+    """Generates an end-to-end quantified recommendation for a single flagged anomaly."""
     savings = compute_quantified_savings(row)
     diagnosis = diagnose_root_cause(row)
 
@@ -114,6 +133,7 @@ def generate_recommendation(
     return {
         "building_id": row.get("building_id"),
         "building_name": row.get("building_name"),
+        "facility_category": row.get("facility_category", "college"),
         "metric": row.get("metric"),
         "hour": row.get("hour"),
         "reading": row.get("reading"),
@@ -137,16 +157,4 @@ def generate_recommendations_for_flagged(df: pd.DataFrame, limit: int = 50) -> p
 
     recs = [generate_recommendation(row) for _, row in flagged.iterrows()]
     recs_df = pd.DataFrame(recs)
-    # Sort by financial loss descending
     return recs_df.sort_values(by="hourly_loss_inr", ascending=False).head(limit)
-
-
-if __name__ == "__main__":
-    from crew.detection import run_detection_pipeline
-    flagged_df = run_detection_pipeline()
-    top_recs = generate_recommendations_for_flagged(flagged_df, limit=5)
-    print("Top 5 Actionable Recommendations:")
-    for i, r in top_recs.iterrows():
-        print(f"\n- {r['building_name']} [{r['metric'].upper()}] Hour {r['hour']}:00 (Deviation: +{r.get('deviation_pct', 0)}%)")
-        print(f"  Action: {r['action']}")
-        print(f"  Financial Waste: ₹{r['hourly_loss_inr']}/hr -> Est. ₹{r['projected_monthly_savings_inr']:,.0f}/mo")

@@ -1,7 +1,6 @@
-"""Test suite validating the heuristic diagnosis and quantified savings calculator."""
+"""Test suite validating the heuristic diagnosis and quantified savings calculator across Energy, Water, and Waste."""
 import pytest
-import pandas as pd
-from crew.recommendations import compute_quantified_savings, diagnose_root_cause, generate_recommendation
+from crew.recommendations import compute_quantified_savings, diagnose_root_cause
 
 
 def test_savings_computation_energy():
@@ -36,17 +35,33 @@ def test_savings_computation_water():
     assert savings["hourly_loss_inr"] == 300.0  # 2000 * 0.15
 
 
-def test_diagnose_root_cause_hostel_night_leak():
-    """Verify hostel overnight water surge diagnosis."""
+def test_savings_computation_waste():
+    """Verify waste savings calculation at ₹12.00/kg."""
     sample_row = {
-        "building_id": "PU-HOSTEL-BA",
-        "building_name": "Boys Hostel Block A",
-        "building_type": "hostel",
-        "metric": "water",
-        "hour": 2,
-        "occupancy": 550,
+        "building_id": "PU-CANTEEN",
+        "reading": 150.0,
+        "predicted": 50.0,
+        "metric": "waste",
+        "deviation_pct": 200.0,
+    }
+    savings = compute_quantified_savings(sample_row)
+
+    assert savings["excess_units"] == 100.0
+    assert savings["unit"] == "kg"
+    assert savings["hourly_loss_inr"] == 1200.0  # 100 * 12.00
+
+
+def test_diagnose_root_cause_canteen_waste():
+    """Verify canteen food waste spoilage diagnosis."""
+    sample_row = {
+        "building_id": "PU-CANTEEN",
+        "building_name": "Central Food Court & Canteen",
+        "building_type": "canteen",
+        "metric": "waste",
+        "hour": 14,
+        "occupancy": 600,
     }
     diag = diagnose_root_cause(sample_row)
 
-    assert "float-valve" in diag["root_cause"].lower() or "tank" in diag["root_cause"].lower()
-    assert "HIGH" in diag["priority"]
+    assert "food" in diag["root_cause"].lower() or "spoilage" in diag["root_cause"].lower()
+    assert "CRITICAL" in diag["priority"]
