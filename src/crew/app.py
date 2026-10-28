@@ -72,105 +72,137 @@ st.set_page_config(
 # ---------------------------------------------------------
 st.markdown("""
 <style>
+    /* 60% Dominant: Base Canvas & Whitespace */
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 1.25rem;
         padding-bottom: 2rem;
+        max-width: 1400px;
     }
 
+    /* 30% Secondary: Structural Header */
     .crew-header {
         background: #0F172A;
         border: 1px solid #1E293B;
         border-radius: 8px;
         padding: 18px 24px;
-        margin-bottom: 18px;
+        margin-bottom: 20px;
         color: #F8FAFC;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     }
     .crew-title {
         font-size: 1.6rem;
         font-weight: 700;
-        letter-spacing: -0.3px;
+        letter-spacing: -0.02em;
         color: #FFFFFF;
         margin: 0;
     }
+    .crew-subtitle {
+        font-size: 0.85rem;
+        color: #94A3B8;
+        margin-top: 3px;
+        font-weight: 400;
+    }
 
+    /* 60% / 30% Minimalist KPI Card System */
     .kpi-card {
         background: #FFFFFF;
         border-radius: 8px;
-        padding: 14px 18px;
-        border: 1px solid #CBD5E1;
-        margin-bottom: 12px;
+        padding: 16px 18px;
+        border: 1px solid #E2E8F0;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: border-color 0.15s ease;
+    }
+    .kpi-card:hover {
+        border-color: #CBD5E1;
     }
     .kpi-label {
-        font-size: 0.75rem;
-        font-weight: 700;
+        font-size: 0.72rem;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #475569;
-        margin-bottom: 4px;
+        letter-spacing: 0.05em;
+        color: #64748B;
+        margin-bottom: 6px;
     }
     .kpi-value {
-        font-size: 1.65rem;
+        font-size: 1.7rem;
         font-weight: 700;
         color: #0F172A;
-        line-height: 1.2;
+        line-height: 1.15;
         font-variant-numeric: tabular-nums;
     }
     .kpi-delta {
         font-size: 0.8rem;
-        font-weight: 600;
-        margin-top: 4px;
-        color: #475569;
+        font-weight: 500;
+        margin-top: 6px;
+        color: #64748B;
     }
 
+    /* Facility Scorecards */
     .building-card {
         background: #FFFFFF;
-        border: 1px solid #CBD5E1;
+        border: 1px solid #E2E8F0;
         border-radius: 8px;
         padding: 14px 16px;
         margin-bottom: 12px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
+    /* 10% Accent: Semantic Status Badges */
     .badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
         padding: 3px 8px;
         border-radius: 4px;
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         font-weight: 700;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.03em;
         text-transform: uppercase;
     }
     .badge-critical {
         background-color: #FEF2F2;
         color: #991B1B;
-        border: 1px solid #FCA5A5;
+        border: 1px solid #FECACA;
     }
     .badge-warning {
         background-color: #FFFBEB;
         color: #92400E;
-        border: 1px solid #FCD34D;
+        border: 1px solid #FDE68A;
     }
     .badge-success {
         background-color: #F0FDF4;
         color: #166534;
-        border: 1px solid #86EFAC;
+        border: 1px solid #BBF7D0;
     }
 
+    /* Action Tier Cards */
     .action-tier-card {
         background: #FFFFFF;
-        border: 1px solid #CBD5E1;
+        border: 1px solid #E2E8F0;
         border-radius: 8px;
         padding: 16px;
         margin-bottom: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
+    /* Clean Tabs with 10% Accent Focus */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
+        gap: 8px;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 4px;
     }
     .stTabs [data-baseweb="tab"] {
         font-weight: 500;
         border-radius: 6px;
-        padding: 6px 14px;
-        font-size: 0.9rem;
+        padding: 8px 16px;
+        font-size: 0.88rem;
+        color: #475569;
+        background: transparent;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #0F172A !important;
+        font-weight: 600 !important;
+        background-color: #F1F5F9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -360,10 +392,13 @@ def main():
     st.markdown(f"""
     <div class="crew-header">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div class="crew-title">Crew Campus ISO Efficiency Watch</div>
             <div>
-                <span class="badge" style="background:#0F766E; color:#CCFBF1; font-size:0.95rem; padding:8px 16px; border:1px solid #14B8A6;">
-                    Facility Score: {campus_stats['health_score']}/100 &nbsp;|&nbsp; Grade {campus_stats['grade']}
+                <div class="crew-title">Crew Campus ISO Efficiency Watch</div>
+                <div class="crew-subtitle">Presidency University Bengaluru &nbsp;•&nbsp; Multi-Domain Telemetry & Decarbonization Intelligence</div>
+            </div>
+            <div>
+                <span class="badge" style="background:#1E293B; color:#F8FAFC; font-size:0.92rem; padding:8px 16px; border:1px solid #334155;">
+                    Facility Score: <strong style="color:#38BDF8; margin-left:4px;">{campus_stats['health_score']}/100</strong> &nbsp;|&nbsp; Grade {campus_stats['grade']}
                 </span>
             </div>
         </div>
@@ -371,52 +406,52 @@ def main():
     """, unsafe_allow_html=True)
 
     # -----------------------------------------------------
-    # Top KPI Row (5 Strategic Metric Cards)
+    # Top KPI Row (5 Strategic Minimalist Metric Cards)
     # -----------------------------------------------------
     kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
 
     with kpi_col1:
         st.markdown(f"""
-        <div class="kpi-card" style="border-top: 3px solid #4F46E5;">
-            <div class="kpi-label">Facility Score</div>
+        <div class="kpi-card">
+            <div class="kpi-label">Facility Health</div>
             <div class="kpi-value">{campus_stats['health_score']}<span style="font-size:1rem; font-weight:500; color:#64748B;">/100</span></div>
-            <div class="kpi-delta">Grade: {campus_stats['grade']} • {campus_stats['status']}</div>
+            <div class="kpi-delta"><span style="color:#2563EB; font-weight:600;">Grade {campus_stats['grade']}</span> • {campus_stats['status']}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with kpi_col2:
         st.markdown(f"""
-        <div class="kpi-card" style="border-top: 3px solid #D97706;">
+        <div class="kpi-card">
             <div class="kpi-label">Excess Energy</div>
             <div class="kpi-value">{campus_stats['excess_energy_kwh']:,.0f} <span style="font-size:0.85rem; font-weight:500; color:#64748B;">kWh</span></div>
-            <div class="kpi-delta" style="color:#B45309;">Power loss above baseline</div>
+            <div class="kpi-delta">Power load above baseline</div>
         </div>
         """, unsafe_allow_html=True)
 
     with kpi_col3:
         st.markdown(f"""
-        <div class="kpi-card" style="border-top: 3px solid #0284C7;">
+        <div class="kpi-card">
             <div class="kpi-label">Excess Water</div>
             <div class="kpi-value">{campus_stats['excess_water_liters']:,.0f} <span style="font-size:0.85rem; font-weight:500; color:#64748B;">L</span></div>
-            <div class="kpi-delta" style="color:#0369A1;">Water loss above baseline</div>
+            <div class="kpi-delta">Volume above baseline</div>
         </div>
         """, unsafe_allow_html=True)
 
     with kpi_col4:
         st.markdown(f"""
-        <div class="kpi-card" style="border-top: 3px solid #DC2626;">
+        <div class="kpi-card">
             <div class="kpi-label">Est. Monthly Loss</div>
             <div class="kpi-value">₹{campus_stats['est_monthly_loss_inr']:,.0f}</div>
-            <div class="kpi-delta" style="color:#B91C1C;">Annual: ₹{campus_stats['est_annual_loss_inr']:,.0f}</div>
+            <div class="kpi-delta" style="color:#DC2626; font-weight:600;">Annual: ₹{campus_stats['est_annual_loss_inr']:,.0f}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with kpi_col5:
         st.markdown(f"""
-        <div class="kpi-card" style="border-top: 3px solid #059669;">
+        <div class="kpi-card">
             <div class="kpi-label">CO₂ Offset Potential</div>
             <div class="kpi-value">{campus_stats['est_monthly_co2_kg']:,.0f} <span style="font-size:0.85rem; font-weight:500; color:#64748B;">kg</span></div>
-            <div class="kpi-delta" style="color:#047857;">~{campus_stats['est_monthly_co2_kg']/1000.0:.1f} Tonnes CO₂e/mo</div>
+            <div class="kpi-delta" style="color:#16A34A; font-weight:600;">~{campus_stats['est_monthly_co2_kg']/1000.0:.1f} Tonnes CO₂e/mo</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -519,9 +554,9 @@ def main():
                 ),
                 colorscale=[
                     [0.0, "#F8FAFC"],
-                    [0.2, "#CBD5E1"],
-                    [0.35, "#FCD34D"],
-                    [0.55, "#F87171"],
+                    [0.2, "#E2E8F0"],
+                    [0.4, "#FEF3C7"],
+                    [0.7, "#FCA5A5"],
                     [1.0, "#991B1B"],
                 ],
                 colorbar=dict(title="Dev %", len=0.8),
@@ -532,6 +567,7 @@ def main():
                 xaxis_title="Hour of Day",
                 yaxis_title="",
                 template="plotly_white",
+                font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
             )
             st.plotly_chart(fig_heat, use_container_width=True)
 
@@ -546,13 +582,18 @@ def main():
                 x=[f"{h:02d}:00" for h in hourly_spikes["hour"]],
                 y=hourly_spikes["excess_waste_inr"],
                 marker_color="#DC2626",
-                opacity=0.85,
+                opacity=0.88,
                 hovertemplate="Hour %{x}<br>Campus Waste Burn: <b>₹%{y:,.0f}</b><extra></extra>",
             ))
             fig_spike.update_layout(
                 title="Hourly Financial Waste Spikes (Campus-Wide)",
                 xaxis_title="Hour of Day",
                 yaxis_title="Total Excess Waste (₹)",
+                margin=dict(l=10, r=10, t=35, b=10),
+                height=340,
+                template="plotly_white",
+                font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
+            )
                 margin=dict(l=10, r=10, t=35, b=10),
                 height=340,
                 template="plotly_white",
@@ -671,7 +712,7 @@ def main():
 
         col_chart_e, col_chart_w, col_chart_waste = st.columns(3)
 
-        # 1. Energy Curve Plotly
+        # 1. Energy Curve Plotly (Accent Blue)
         with col_chart_e:
             e_data = b_hourly[b_hourly["metric"] == "energy"].sort_values(by="hour")
             if not e_data.empty:
@@ -679,13 +720,13 @@ def main():
                 fig_e.add_trace(go.Scatter(
                     x=e_data["hour"], y=e_data["predicted"],
                     mode="lines", name="Baseline",
-                    line=dict(color="#64748B", width=1.8, dash="dash"),
+                    line=dict(color="#94A3B8", width=1.8, dash="dash"),
                 ))
                 fig_e.add_trace(go.Scatter(
                     x=e_data["hour"], y=e_data["reading"],
                     mode="lines+markers", name="Recorded",
-                    line=dict(color="#D97706", width=2),
-                    fill="tonexty", fillcolor="rgba(217, 119, 6, 0.10)",
+                    line=dict(color="#2563EB", width=2),
+                    fill="tonexty", fillcolor="rgba(37, 99, 235, 0.08)",
                 ))
                 fig_e.update_layout(
                     title="Electricity Load (kWh)",
@@ -695,13 +736,14 @@ def main():
                     margin=dict(l=10, r=10, t=35, b=10),
                     height=300,
                     template="plotly_white",
+                    font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 )
                 st.plotly_chart(fig_e, use_container_width=True)
             else:
                 st.info("No electricity telemetry.")
 
-        # 2. Water Curve Plotly
+        # 2. Water Curve Plotly (Sky Blue)
         with col_chart_w:
             w_data = b_hourly[b_hourly["metric"] == "water"].sort_values(by="hour")
             if not w_data.empty:
@@ -709,13 +751,13 @@ def main():
                 fig_w.add_trace(go.Scatter(
                     x=w_data["hour"], y=w_data["predicted"],
                     mode="lines", name="Baseline",
-                    line=dict(color="#64748B", width=1.8, dash="dash"),
+                    line=dict(color="#94A3B8", width=1.8, dash="dash"),
                 ))
                 fig_w.add_trace(go.Scatter(
                     x=w_data["hour"], y=w_data["reading"],
                     mode="lines+markers", name="Recorded",
                     line=dict(color="#0284C7", width=2),
-                    fill="tonexty", fillcolor="rgba(2, 132, 199, 0.10)",
+                    fill="tonexty", fillcolor="rgba(2, 132, 199, 0.08)",
                 ))
                 fig_w.update_layout(
                     title="Water Flow (Liters/hr)",
@@ -725,13 +767,14 @@ def main():
                     margin=dict(l=10, r=10, t=35, b=10),
                     height=300,
                     template="plotly_white",
+                    font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 )
                 st.plotly_chart(fig_w, use_container_width=True)
             else:
                 st.info("No water telemetry.")
 
-        # 3. Waste Curve Plotly
+        # 3. Waste Curve Plotly (Teal Accent)
         with col_chart_waste:
             waste_data = b_hourly[b_hourly["metric"] == "waste"].sort_values(by="hour")
             if not waste_data.empty:
@@ -739,13 +782,13 @@ def main():
                 fig_waste.add_trace(go.Scatter(
                     x=waste_data["hour"], y=waste_data["predicted"],
                     mode="lines", name="Baseline",
-                    line=dict(color="#64748B", width=1.8, dash="dash"),
+                    line=dict(color="#94A3B8", width=1.8, dash="dash"),
                 ))
                 fig_waste.add_trace(go.Scatter(
                     x=waste_data["hour"], y=waste_data["reading"],
                     mode="lines+markers", name="Recorded",
-                    line=dict(color="#059669", width=2),
-                    fill="tonexty", fillcolor="rgba(5, 150, 105, 0.10)",
+                    line=dict(color="#0D9488", width=2),
+                    fill="tonexty", fillcolor="rgba(13, 148, 136, 0.08)",
                 ))
                 fig_waste.update_layout(
                     title="Solid & Food Waste (kg/hr)",
@@ -755,6 +798,7 @@ def main():
                     margin=dict(l=10, r=10, t=35, b=10),
                     height=300,
                     template="plotly_white",
+                    font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 )
                 st.plotly_chart(fig_waste, use_container_width=True)
@@ -773,7 +817,7 @@ def main():
                 x="facility_category",
                 y="deviation_pct",
                 color="facility_category",
-                color_discrete_sequence=["#3B82F6", "#F59E0B", "#10B981"],
+                color_discrete_sequence=["#2563EB", "#64748B", "#94A3B8"],
                 template="plotly_white",
             )
             fig_bar_cat.update_layout(
@@ -782,6 +826,7 @@ def main():
                 margin=dict(l=10, r=10, t=25, b=10),
                 height=280,
                 showlegend=False,
+                font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
             )
             st.plotly_chart(fig_bar_cat, use_container_width=True)
 
@@ -803,13 +848,14 @@ def main():
                     y="Facility",
                     orientation="h",
                     color="Night/Day Ratio %",
-                    color_continuous_scale="Reds",
+                    color_continuous_scale=[[0.0, "#F1F5F9"], [0.5, "#94A3B8"], [1.0, "#DC2626"]],
                     template="plotly_white",
                 )
                 fig_bar.update_layout(
                     margin=dict(l=10, r=10, t=10, b=10),
                     height=280,
                     yaxis=dict(autorange="reversed"),
+                    font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
                 )
                 st.plotly_chart(fig_bar, use_container_width=True)
             else:
@@ -906,39 +952,39 @@ def main():
 
             with tier_col1:
                 st.markdown("""
-                <div class="action-tier-card" style="border-top: 3px solid #059669;">
-                    <div style="font-weight:600; color:#065F46; font-size:0.9rem;">Tier 1: Zero-Cost Quick Wins</div>
+                <div class="action-tier-card" style="border: 1px solid #BBF7D0; border-top: 3px solid #16A34A;">
+                    <div style="font-weight:700; color:#166534; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.04em;">Tier 1: Zero-Cost Quick Wins</div>
                     <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Immediate operational & software adjustments (₹0 CAPEX)</div>
-                    <hr style="margin:8px 0; border:none; border-top:1px solid #E2E8F0;"/>
-                    <div style="font-size:0.8rem; color:#1E293B; line-height:1.4;">
-                        <strong>• School of Engineering (SOE):</strong> Reconfigure BMS timer to cut off workshop HVAC & machinery contactors at 20:30.<br/>
-                        <span style="color:#059669; font-weight:600;">Est. Savings: ₹42,500/mo • Instant ROI</span>
+                    <hr style="margin:10px 0; border:none; border-top:1px solid #E2E8F0;"/>
+                    <div style="font-size:0.82rem; color:#0F172A; line-height:1.45;">
+                        <strong>School of Engineering (SOE):</strong> Reconfigure BMS timer to cut off workshop HVAC & machinery contactors at 20:30.<br/>
+                        <span style="color:#16A34A; font-weight:600; font-size:0.8rem; display:inline-block; margin-top:4px;">Est. Savings: ₹42,500/mo • Instant ROI</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
             with tier_col2:
                 st.markdown("""
-                <div class="action-tier-card" style="border-top: 3px solid #D97706;">
-                    <div style="font-weight:600; color:#92400E; font-size:0.9rem;">Tier 2: Targeted Facility Repairs</div>
+                <div class="action-tier-card" style="border: 1px solid #FDE68A; border-top: 3px solid #D97706;">
+                    <div style="font-weight:700; color:#92400E; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.04em;">Tier 2: Targeted Facility Repairs</div>
                     <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Low-cost maintenance & component fixes (&lt; ₹2,500 CAPEX)</div>
-                    <hr style="margin:8px 0; border:none; border-top:1px solid #E2E8F0;"/>
-                    <div style="font-size:0.8rem; color:#1E293B; line-height:1.4;">
-                        <strong>• Boys Hostel Main Block (B2 Laundry):</strong> Replace high-pressure solenoid valves and calibrate sump level sensors.<br/>
-                        <span style="color:#059669; font-weight:600;">Est. Savings: ₹32,400/mo • Payback: 1.4 Days</span>
+                    <hr style="margin:10px 0; border:none; border-top:1px solid #E2E8F0;"/>
+                    <div style="font-size:0.82rem; color:#0F172A; line-height:1.45;">
+                        <strong>Boys Hostel Main Block (B2 Laundry):</strong> Replace high-pressure solenoid valves and calibrate sump level sensors.<br/>
+                        <span style="color:#D97706; font-weight:600; font-size:0.8rem; display:inline-block; margin-top:4px;">Est. Savings: ₹32,400/mo • Payback: 1.4 Days</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
             with tier_col3:
                 st.markdown("""
-                <div class="action-tier-card" style="border-top: 3px solid #4F46E5;">
-                    <div style="font-weight:600; color:#3730A3; font-size:0.9rem;">Tier 3: Workload & Waste Infrastructure</div>
-                    <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Systems tuning & on-site composting</div>
-                    <hr style="margin:8px 0; border:none; border-top:1px solid #E2E8F0;"/>
-                    <div style="font-size:0.8rem; color:#1E293B; line-height:1.4;">
-                        <strong>• Central Food Court & Canteen:</strong> Deploy organic food digester composter and enforce segregated kitchen disposal.<br/>
-                        <span style="color:#059669; font-weight:600;">Est. Savings: ₹36,000/mo • Payback: 7 Days</span>
+                <div class="action-tier-card" style="border: 1px solid #BFDBFE; border-top: 3px solid #2563EB;">
+                    <div style="font-weight:700; color:#1E40AF; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.04em;">Tier 3: Infrastructure Tuning</div>
+                    <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Systems optimization & organic waste digesting</div>
+                    <hr style="margin:10px 0; border:none; border-top:1px solid #E2E8F0;"/>
+                    <div style="font-size:0.82rem; color:#0F172A; line-height:1.45;">
+                        <strong>Central Food Court & Canteen:</strong> Deploy organic food digester composter and enforce segregated kitchen disposal.<br/>
+                        <span style="color:#2563EB; font-weight:600; font-size:0.8rem; display:inline-block; margin-top:4px;">Est. Savings: ₹36,000/mo • Payback: 7 Days</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
