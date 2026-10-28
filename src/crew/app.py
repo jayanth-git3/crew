@@ -594,10 +594,6 @@ def main():
                 template="plotly_white",
                 font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size=11, color="#0F172A"),
             )
-                margin=dict(l=10, r=10, t=35, b=10),
-                height=340,
-                template="plotly_white",
-            )
             st.plotly_chart(fig_spike, use_container_width=True)
 
         st.divider()
