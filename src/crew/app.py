@@ -181,7 +181,7 @@ st.markdown("""
 # ---------------------------------------------------------
 @st.cache_data
 def load_or_generate_data() -> pd.DataFrame:
-    """Loads 3 domain datasets (Energy, Water, Waste) or generates 3x 10k records."""
+    """Loads 3 domain datasets (Energy, Water, Waste) or generates 3x 100k records."""
     data_dir = Path("data")
     energy_f = data_dir / "energy_data.csv"
     water_f = data_dir / "water_data.csv"
@@ -193,7 +193,7 @@ def load_or_generate_data() -> pd.DataFrame:
         df_waste = pd.read_csv(waste_f)
         combined_df = pd.concat([df_e, df_w, df_waste], ignore_index=True)
     else:
-        datasets = generate_all_datasets(target_per_domain=10000)
+        datasets = generate_all_datasets(target_per_domain=100000)
         combined_df = datasets["combined"]
 
     return combined_df

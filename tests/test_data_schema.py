@@ -1,4 +1,4 @@
-"""Test suite validating compliance with the locked IEEE hackathon data contract across all 3 domains."""
+"""Test suite validating compliance with data schema and domain separation across all 3 domains."""
 from pathlib import Path
 import pytest
 import pandas as pd
@@ -6,7 +6,7 @@ from crew.data_generator import generate_domain_dataset, generate_all_datasets
 
 
 def test_schema_columns_and_contract():
-    """Verify that domain datasets strictly match the locked IEEE schema."""
+    """Verify that domain datasets strictly match the telemetry schema including floor_zone."""
     df = generate_domain_dataset("energy", target_rows=100, seed=123)
 
     expected_columns = [
@@ -14,6 +14,7 @@ def test_schema_columns_and_contract():
         "building_name",
         "building_type",
         "facility_category",
+        "floor_zone",
         "occupancy",
         "hour",
         "metric",
@@ -25,7 +26,7 @@ def test_schema_columns_and_contract():
 
 
 def test_domain_files_row_counts_and_separation():
-    """Verify that 3 independent domain files each contain 10,000 rows and combined has 30,000 rows."""
+    """Verify that 3 independent domain files each contain 100,000 rows and combined has 300,000 rows."""
     data_dir = Path("data")
     assert (data_dir / "energy_data.csv").exists(), "energy_data.csv missing"
     assert (data_dir / "water_data.csv").exists(), "water_data.csv missing"
@@ -37,10 +38,10 @@ def test_domain_files_row_counts_and_separation():
     df_waste = pd.read_csv(data_dir / "waste_data.csv")
     df_combined = pd.read_csv(data_dir / "campus_data.csv")
 
-    assert len(df_e) == 10000, f"Expected 10,000 energy rows, got {len(df_e)}"
-    assert len(df_w) == 10000, f"Expected 10,000 water rows, got {len(df_w)}"
-    assert len(df_waste) == 10000, f"Expected 10,000 waste rows, got {len(df_waste)}"
-    assert len(df_combined) == 30000, f"Expected 30,000 combined rows, got {len(df_combined)}"
+    assert len(df_e) == 100000, f"Expected 100,000 energy rows, got {len(df_e)}"
+    assert len(df_w) == 100000, f"Expected 100,000 water rows, got {len(df_w)}"
+    assert len(df_waste) == 100000, f"Expected 100,000 waste rows, got {len(df_waste)}"
+    assert len(df_combined) == 300000, f"Expected 300,000 combined rows, got {len(df_combined)}"
 
     # Check metrics are properly separated
     assert (df_e["metric"] == "energy").all()
@@ -53,3 +54,4 @@ def test_facility_categories_present():
     df = pd.read_csv("data/campus_data.csv")
     expected_categories = {"college", "hostel", "canteen"}
     assert set(df["facility_category"].unique()) == expected_categories
+    assert len(df["building_id"].unique()) == 14

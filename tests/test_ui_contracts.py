@@ -20,12 +20,14 @@ from crew.recommendations import (
 def _generate_mock_analyzed_df(n_rows: int = 3000) -> pd.DataFrame:
     """Creates a mock analyzed DataFrame simulating model output."""
     np.random.seed(42)
-    b_names = [b["building_name"] for b in BUILDINGS]
+    b_map = {b["building_name"]: b for b in BUILDINGS}
+    b_names = list(b_map.keys())
     metrics = ["energy", "water", "waste"]
 
     rows = []
     for i in range(n_rows):
-        b = np.random.choice(b_names)
+        b_name = np.random.choice(b_names)
+        b = b_map[b_name]
         m = np.random.choice(metrics)
         hour = np.random.randint(0, 24)
         pred = np.random.uniform(20.0, 100.0)
@@ -34,11 +36,15 @@ def _generate_mock_analyzed_df(n_rows: int = 3000) -> pd.DataFrame:
         reading = pred * np.random.uniform(1.3, 2.0) if is_flagged else pred * np.random.uniform(0.9, 1.1)
         dev_pct = ((reading - pred) / pred) * 100.0
 
+        floors = b.get("floors", ["Ground"])
+        floor_selected = floors[i % len(floors)]
+
         rows.append({
-            "building_id": f"BLD-{i%9:02d}",
-            "building_name": b,
-            "building_type": "academic" if "Academic" in b else ("hostel" if "Hostel" in b else "canteen"),
-            "facility_category": "college" if "Academic" in b else ("hostel" if "Hostel" in b else "canteen"),
+            "building_id": b["building_id"],
+            "building_name": b["building_name"],
+            "building_type": b["building_type"],
+            "facility_category": b.get("facility_category", "college"),
+            "floor_zone": floor_selected,
             "metric": m,
             "hour": hour,
             "occupancy": int(np.random.uniform(10, 500)),

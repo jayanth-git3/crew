@@ -71,8 +71,9 @@ class CampusResourceDetector:
         # Train singular unified regressor
         self.model = RandomForestRegressor(
             n_estimators=self.n_estimators,
-            max_depth=16,
+            max_depth=18,
             min_samples_split=4,
+            max_samples=0.5,
             random_state=self.random_state,
             n_jobs=-1,
         )

@@ -1,11 +1,9 @@
-"""Synthetic Campus Data Generator for Presidency University Bengaluru.
-Produces 3 independent 10,000-record domain datasets:
-1. data/energy_data.csv (10k records)
-2. data/water_data.csv (10k records)
-3. data/waste_data.csv (10k records)
-Plus consolidated bridge: data/campus_data.csv (30k records).
-
-Columns: building_id, building_name, building_type, facility_category, occupancy, hour, metric, reading, known_inefficient
+"""Scalable Multi-Domain Telemetry Generator for Presidency University Bengaluru.
+Produces 3 independent 100,000-record datasets (300,000 records total):
+1. data/energy_data.csv (100k records)
+2. data/water_data.csv (100k records)
+3. data/waste_data.csv (100k records)
+Consolidated into data/campus_data.csv (300k records).
 """
 from __future__ import annotations
 from pathlib import Path
@@ -22,7 +20,7 @@ def get_hourly_occupancy(building: Dict[str, Any], hour: int, day: int, rng: np.
     capacity = building["capacity"]
     is_weekend = (day % 7) in (5, 6)
 
-    if b_type == "academic":
+    if b_type in ("academic", "engineering"):
         if is_weekend:
             ratio = rng.uniform(0.01, 0.08) if 9 <= hour <= 16 else 0.0
         else:
@@ -35,16 +33,16 @@ def get_hourly_occupancy(building: Dict[str, Any], hour: int, day: int, rng: np.
             else:
                 ratio = rng.uniform(0.0, 0.01)
 
-    elif b_type == "lab":
+    elif b_type in ("lab", "studio"):
         if is_weekend:
-            ratio = rng.uniform(0.05, 0.18) if 10 <= hour <= 17 else 0.0
+            ratio = rng.uniform(0.05, 0.20) if 10 <= hour <= 17 else 0.0
         else:
             if 9 <= hour <= 17:
-                ratio = rng.uniform(0.50, 0.85)
+                ratio = rng.uniform(0.55, 0.90)
             elif hour in (8, 18, 19):
-                ratio = rng.uniform(0.10, 0.25)
+                ratio = rng.uniform(0.12, 0.30)
             else:
-                ratio = 0.0
+                ratio = rng.uniform(0.01, 0.04)
 
     elif b_type == "hostel":
         if is_weekend:
@@ -101,7 +99,7 @@ def calculate_reading(
     hour: int,
     rng: np.random.Generator,
 ) -> float:
-    """Computes expected baseline reading + natural variance, with rigged anomalies."""
+    """Computes expected baseline reading + natural variance, with injected operational anomalies."""
     if metric == "energy":
         base = building["base_energy"]
         occ_rate = building["energy_per_occ"]
@@ -115,7 +113,6 @@ def calculate_reading(
     else:  # waste (kg)
         base = building["base_waste"]
         occ_rate = building["waste_per_occ"]
-        # Post-meal waste generation peaks
         time_factor = 1.45 if (13 <= hour <= 15 or 20 <= hour <= 22) else 0.80
         expected = (base + (occupancy * occ_rate)) * time_factor
 
@@ -123,7 +120,7 @@ def calculate_reading(
     noise = rng.normal(1.0, 0.03)
     actual = max(0.5, expected * noise)
 
-    # Apply deliberate rigged anomaly if building is known_inefficient
+    # Apply deliberate anomaly if building is known_inefficient
     if building.get("known_inefficient", False):
         anomaly_metric = building.get("anomaly_metric")
         anomaly_hours = building.get("anomaly_hours", [])
@@ -137,14 +134,14 @@ def calculate_reading(
 
 def generate_domain_dataset(
     metric: str,
-    target_rows: int = 10000,
+    target_rows: int = 100000,
     seed: int = 42,
 ) -> pd.DataFrame:
     """Generates an independent single-domain dataset containing exactly target_rows."""
     rng = np.random.default_rng(seed)
     records: List[Dict[str, Any]] = []
 
-    # Calculate days needed: 9 buildings * 24 hours = 216 records/day
+    # Calculate days needed based on number of facilities
     records_per_day = len(BUILDINGS) * 24
     days_needed = int(np.ceil(target_rows / records_per_day))
 
@@ -154,11 +151,15 @@ def generate_domain_dataset(
                 occ = get_hourly_occupancy(b, hour, day, rng)
                 reading_val = calculate_reading(b, metric, occ, hour, rng)
 
+                floors = b.get("floors", ["Ground", "Floor 1", "Floor 2", "Floor 3"])
+                floor_selected = floors[day % len(floors)]
+
                 records.append({
                     "building_id": b["building_id"],
                     "building_name": b["building_name"],
                     "building_type": b["building_type"],
                     "facility_category": b.get("facility_category", "college"),
+                    "floor_zone": floor_selected,
                     "occupancy": int(occ),
                     "hour": int(hour),
                     "metric": metric,
@@ -178,6 +179,7 @@ def generate_domain_dataset(
     df["building_name"] = df["building_name"].astype(str)
     df["building_type"] = df["building_type"].astype(str)
     df["facility_category"] = df["facility_category"].astype(str)
+    df["floor_zone"] = df["floor_zone"].astype(str)
     df["occupancy"] = df["occupancy"].astype(int)
     df["hour"] = df["hour"].astype(int)
     df["metric"] = df["metric"].astype(str)
@@ -187,8 +189,8 @@ def generate_domain_dataset(
     return df
 
 
-def generate_all_datasets(target_per_domain: int = 10000) -> Dict[str, pd.DataFrame]:
-    """Generates 3 separate 10k datasets (Energy, Water, Waste) and a consolidated 30k bridge."""
+def generate_all_datasets(target_per_domain: int = 100000) -> Dict[str, pd.DataFrame]:
+    """Generates 3 separate 100k datasets (Energy, Water, Waste) and a consolidated 300k bridge."""
     p_data = Path("data")
     p_data.mkdir(parents=True, exist_ok=True)
 
@@ -204,8 +206,8 @@ def generate_all_datasets(target_per_domain: int = 10000) -> Dict[str, pd.DataFr
     waste_df = generate_domain_dataset("waste", target_rows=target_per_domain, seed=303)
     waste_df.to_csv(p_data / "waste_data.csv", index=False)
 
-    # Consolidated bridge (30,000 rows)
-    print("Consolidating combined campus_data.csv bridge (30,000 rows)...")
+    # Consolidated bridge (300,000 rows)
+    print("Consolidating combined campus_data.csv bridge (300,000 rows)...")
     combined_df = pd.concat([energy_df, water_df, waste_df], ignore_index=True)
     combined_df.to_csv(p_data / "campus_data.csv", index=False)
 
@@ -226,6 +228,6 @@ def save_dataset(df: pd.DataFrame, output_path: str = "data/campus_data.csv") ->
 
 
 if __name__ == "__main__":
-    datasets = generate_all_datasets(target_per_domain=10000)
+    datasets = generate_all_datasets(target_per_domain=100000)
     for name, d in datasets.items():
         print(f"  • {name:<10}: {len(d):,} records saved.")
