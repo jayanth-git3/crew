@@ -144,15 +144,35 @@ def diagnose_root_cause(row: Dict[str, Any] | pd.Series) -> Dict[str, Any]:
                 "payback_days": 0.0,
                 "responsible_team": "Electrical & BMS Automation",
             }
-        elif b_type == "lab":
+        elif b_type in ("lab", "engineering"):
+            if "gpu" in b_name.lower() or "computer" in b_name.lower() or "socse" in b_name.lower():
+                return {
+                    "root_cause": "High-density GPU AI compute nodes and precision CRAC cooling running at full thermal load without active workloads.",
+                    "action": "Enable dynamic OS CPU/GPU power-governor downscaling and optimize cold-aisle containment baffles.",
+                    "priority": "CRITICAL - HIGH ROI",
+                    "tier": "Tier 3: Systems & Workload Tuning",
+                    "capex_inr": 0,
+                    "payback_days": 0.0,
+                    "responsible_team": "HPC & AI Computing Operations",
+                }
             return {
-                "root_cause": "High-performance compute clusters and precision cooling operating at full thermal load without active workloads.",
-                "action": "Enable dynamic OS CPU power-governor downscaling and optimize cold-aisle air containment baffles.",
+                "root_cause": "Mechanical engineering workshop 3-phase lathe compressors and hydraulic test benches idling outside scheduled lab sessions.",
+                "action": "Install contactor relay auto-cutoffs on main workshop distribution boards after 18:00.",
                 "priority": "HIGH",
-                "tier": "Tier 3: Systems & Workload Tuning",
+                "tier": "Tier 1: Operational Quick Win",
                 "capex_inr": 0,
                 "payback_days": 0.0,
-                "responsible_team": "HPC Computing Operations",
+                "responsible_team": "Workshop Electrical Operations",
+            }
+        elif b_type == "studio":
+            return {
+                "root_cause": "Broadcast television studio lighting grids and post-production edit suites left energized overnight.",
+                "action": "Implement keycard master disconnect switches for studio production stages and render clusters.",
+                "priority": "HIGH",
+                "tier": "Tier 1: Operational Quick Win",
+                "capex_inr": 800,
+                "payback_days": 0.8,
+                "responsible_team": "Media Technical Operations",
             }
         else:
             return {
