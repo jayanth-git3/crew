@@ -149,7 +149,7 @@ def test_no_encoding_artifacts_in_app():
 
 
 def test_app_renders_without_exceptions():
-    """Verify Streamlit app runs from top-to-bottom headlessly without raising unhandled exceptions."""
+    """Verify Streamlit app runs from top-to-bottom headlessly without raising unhandled exceptions and renders all 3 telemetry curves."""
     from streamlit.testing.v1 import AppTest
     from pathlib import Path
 
@@ -157,4 +157,8 @@ def test_app_renders_without_exceptions():
     at = AppTest.from_file(str(app_path), default_timeout=30)
     at.run()
     assert len(at.exception) == 0, f"App execution raised exceptions: {[e.value for e in at.exception]}"
+
+    info_texts = [info.value for info in at.info]
+    assert "No water telemetry." not in info_texts, "Water telemetry missing on default scope"
+    assert "No waste telemetry." not in info_texts, "Waste telemetry missing on default scope"
 

@@ -372,11 +372,11 @@ def main():
         filtered_df = filtered_df[filtered_df["facility_category"] == "canteen"]
 
     # Metric filter
-    if "Energy" in metric_choice:
+    if metric_choice == "Energy (kWh)":
         filtered_df = filtered_df[filtered_df["metric"] == "energy"]
-    elif "Water" in metric_choice:
+    elif metric_choice == "Water (Liters)":
         filtered_df = filtered_df[filtered_df["metric"] == "water"]
-    elif "Waste" in metric_choice:
+    elif metric_choice == "Waste (kg)":
         filtered_df = filtered_df[filtered_df["metric"] == "waste"]
 
     flagged_df = filtered_df[filtered_df["flagged"]]
@@ -533,7 +533,7 @@ def main():
 
             # Calculate burn rate matrix
             rates_map = {"energy": ENERGY_COST_PER_KWH, "water": WATER_COST_PER_LITER, "waste": WASTE_COST_PER_KG}
-            curr_rate = ENERGY_COST_PER_KWH if "Energy" in metric_choice else (WATER_COST_PER_LITER if "Water" in metric_choice else (WASTE_COST_PER_KG if "Waste" in metric_choice else 8.50))
+            curr_rate = ENERGY_COST_PER_KWH if metric_choice == "Energy (kWh)" else (WATER_COST_PER_LITER if metric_choice == "Water (Liters)" else (WASTE_COST_PER_KG if metric_choice == "Waste (kg)" else 8.50))
             pivot_burn = (pivot_read - pivot_pred).clip(lower=0.0) * curr_rate
 
             custom_data = np.dstack((pivot_pred.values, pivot_read.values, pivot_burn.values))
