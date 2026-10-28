@@ -1,0 +1,17 @@
+[project]
+name = "crew"
+version = "0.1.0"
+description = "Campus Resource Efficiency Watch - AI tool for campus energy and water efficiency"
+readme = "README.md"
+authors = [
+    { name = "Poorvith M P", email = "poorvith007@proton.me" }
+]
+requires-python = ">=3.15"
+dependencies = []
+
+[project.scripts]
+crew = "crew:main"
+
+[build-system]
+requires = ["uv_build>=0.13.3,<0.14.0"]
+build-backend = "uv_build"
