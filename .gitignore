@@ -5,6 +5,13 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
 
 # Virtual environments
-.venv
+.venv/
+
+# Binary models & large caches
+models/*.joblib
+models/*.pkl
+*.joblib
+*.pkl
