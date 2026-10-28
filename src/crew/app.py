@@ -237,7 +237,7 @@ def main():
         if detector.metrics:
             st.markdown("##### Model Accuracy (R² Benchmark)")
             overall_r2 = detector.metrics.get("overall", {}).get("r2", 0.9984)
-            st.caption(f"Singular Model: **{overall_r2 * 100:.2f}%** fit across 30,000 records")
+            st.caption(f"Singular Model: **{overall_r2 * 100:.2f}%** fit across {len(raw_df):,} records")
             with st.expander("Domain-Specific Scores"):
                 for m in ["energy", "water", "waste"]:
                     r2_score = detector.metrics.get(m, {}).get("r2", 0.99)
@@ -253,7 +253,7 @@ def main():
 
         facility_choice = st.selectbox(
             "Facility Category:",
-            ["All Facilities", "College Blocks", "Hostels", "Canteen"],
+            ["All Facilities", "Presidency Schools (Academic)", "Hostel Blocks", "Food Court & Canteen"],
             index=0,
         )
 
@@ -266,16 +266,25 @@ def main():
             help="Flags hours where consumption exceeds singular model baseline by this percentage.",
         )
 
-        all_buildings = sorted(raw_df["building_name"].unique())
+        # Scoped facility multiselect based on facility category
+        if facility_choice == "Presidency Schools (Academic)":
+            avail_options = sorted(raw_df[raw_df["facility_category"] == "college"]["building_name"].unique())
+        elif facility_choice == "Hostel Blocks":
+            avail_options = sorted(raw_df[raw_df["facility_category"] == "hostel"]["building_name"].unique())
+        elif facility_choice == "Food Court & Canteen":
+            avail_options = sorted(raw_df[raw_df["facility_category"] == "canteen"]["building_name"].unique())
+        else:
+            avail_options = sorted(raw_df["building_name"].unique())
+
         selected_buildings = st.multiselect(
             "Campus Facilities:",
-            options=all_buildings,
-            default=all_buildings,
+            options=avail_options,
+            default=avail_options,
         )
 
         if not selected_buildings:
             st.warning("Please select at least one facility.")
-            selected_buildings = all_buildings
+            selected_buildings = avail_options
 
         hour_range = st.slider(
             "Hour of Day (24h Window):",
@@ -301,10 +310,10 @@ def main():
             custom_url = st.text_input("FreeLLMAPI Gateway URL", value="http://localhost:3001/v1")
 
         st.markdown("#### Telemetry Management")
-        if st.button("Regenerate & Retrain (30k Records)", use_container_width=True):
+        if st.button("Regenerate & Retrain (300k Records)", use_container_width=True):
             st.cache_data.clear()
             st.cache_resource.clear()
-            fresh_datasets = generate_all_datasets(target_per_domain=10000)
+            fresh_datasets = generate_all_datasets(target_per_domain=100000)
             fresh_df = fresh_datasets["combined"]
             new_detector = CampusResourceDetector()
             new_detector.fit(fresh_df)
@@ -323,11 +332,11 @@ def main():
     ].copy()
 
     # Facility Category filter
-    if facility_choice == "College Blocks":
+    if facility_choice == "Presidency Schools (Academic)":
         filtered_df = filtered_df[filtered_df["facility_category"] == "college"]
-    elif facility_choice == "Hostels":
+    elif facility_choice == "Hostel Blocks":
         filtered_df = filtered_df[filtered_df["facility_category"] == "hostel"]
-    elif facility_choice == "Canteen":
+    elif facility_choice == "Food Court & Canteen":
         filtered_df = filtered_df[filtered_df["facility_category"] == "canteen"]
 
     # Metric filter
@@ -621,7 +630,7 @@ def main():
         st.markdown("#### Facility Telemetry Drill-Down")
         st.caption("Telemetry curves comparing recorded measurements vs singular model baseline.")
 
-        drill_col1, drill_col2 = st.columns([1.4, 1.1])
+        drill_col1, drill_col2, drill_col3 = st.columns([1.2, 1.0, 1.2])
         with drill_col1:
             drill_building = st.selectbox(
                 "Campus Facility:",
@@ -629,8 +638,23 @@ def main():
                 index=0,
             )
 
+        b_telemetry_all = filtered_df[filtered_df["building_name"] == drill_building]
         b_profile = next((b for b in BUILDINGS if b["building_name"] == drill_building), {})
+        available_floors = ["All Floors / Zones"] + sorted(b_telemetry_all["floor_zone"].dropna().unique().tolist())
+
         with drill_col2:
+            drill_floor = st.selectbox(
+                "Floor / Operational Zone:",
+                options=available_floors,
+                index=0,
+            )
+
+        if drill_floor != "All Floors / Zones":
+            b_telemetry = b_telemetry_all[b_telemetry_all["floor_zone"] == drill_floor]
+        else:
+            b_telemetry = b_telemetry_all
+
+        with drill_col3:
             # High-contrast theme-compatible container
             with st.container(border=True):
                 st.markdown(f"**{drill_building}** Profile")
@@ -643,8 +667,6 @@ def main():
                     st.caption(f"Base Water: **{b_profile.get('base_water', 'N/A')} L/hr** | Waste: **{b_profile.get('base_waste', 'N/A')} kg/hr**")
 
         st.markdown("<br/>", unsafe_allow_html=True)
-
-        b_telemetry = filtered_df[filtered_df["building_name"] == drill_building]
         b_hourly = b_telemetry.groupby(["hour", "metric"])[["reading", "predicted"]].mean().reset_index()
 
         col_chart_e, col_chart_w, col_chart_waste = st.columns(3)
@@ -810,23 +832,23 @@ def main():
 
             with sim_col1:
                 st.markdown("##### Target Operational Interventions")
-                fix_acad1 = st.checkbox(
-                    "Academic Block 1: Automate BMS HVAC & Lighting Shutdown (21:00 - 05:00)",
+                fix_soe = st.checkbox(
+                    "School of Engineering (SOE): Automate BMS Workshop & Heavy Equipment Cutoff (20:30 - 05:00)",
                     value=True,
-                    help="Enforces automated timer shutdown and installs PIR occupancy sensors. Eliminates ~42,500 kWh/mo.",
+                    help="Automates nightly contactor shutdown across mechanical & fluid mechanics workshops. Saves ~42,500 kWh/mo.",
                 )
-                fix_hostel = st.checkbox(
-                    "Boys Hostel Block A: Replace Rooftop Float Valve & Patch Subterranean Line",
+                fix_hostel_b2 = st.checkbox(
+                    "Boys Hostel Main Block (B2 Laundry): Calibrate Commercial Washers & Repair High-Pressure Valves",
                     value=True,
-                    help="Replaces stuck mechanical float valve on roof and patches supply valve. Saves ~540,000 L/mo.",
+                    help="Replaces worn solenoid intake valves and fixes float cutoff on central laundry sumps. Saves ~216,000 L/mo.",
                 )
                 fix_canteen = st.checkbox(
-                    "Central Food Court: Install On-Site Biogas Digester & Food Portion Waste Audit",
+                    "Central Food Court & Canteen: Install Biogas Digesting Composter & Daily Kitchen Food Audit",
                     value=True,
-                    help="Converts 6,000 kg/mo organic food waste into kitchen cooking biogas and organic fertilizer.",
+                    help="Converts organic canteen preparation waste into methane for cooking ranges and compost for gardens.",
                 )
-                fix_cs_lab = st.checkbox(
-                    "CS & AI Computing Center: Enable Dynamic GPU Power-Governors & Precision AC Optimization",
+                fix_sois_gpu = st.checkbox(
+                    "School of Info Science (SOIS GPU Center): Enable Dynamic Compute Throttling & Precision AC Baffles",
                     value=True,
                     help="Downscales idle high-density GPU racks and optimizes cold-aisle air baffles overnight.",
                 )
@@ -837,12 +859,12 @@ def main():
             sim_monthly_waste_kg = 0.0
             sim_capex_inr = 0.0
 
-            if fix_acad1:
+            if fix_soe:
                 sim_monthly_savings_inr += 42500.0
                 sim_monthly_energy_kwh += 5000.0
                 sim_capex_inr += 0.0
 
-            if fix_hostel:
+            if fix_hostel_b2:
                 sim_monthly_savings_inr += 32400.0
                 sim_monthly_water_l += 216000.0
                 sim_capex_inr += 1500.0
@@ -852,7 +874,7 @@ def main():
                 sim_monthly_waste_kg += 3000.0
                 sim_capex_inr += 8000.0
 
-            if fix_cs_lab:
+            if fix_sois_gpu:
                 sim_monthly_savings_inr += 28500.0
                 sim_monthly_energy_kwh += 3350.0
                 sim_capex_inr += 0.0
@@ -889,7 +911,7 @@ def main():
                     <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Immediate operational & software adjustments (₹0 CAPEX)</div>
                     <hr style="margin:8px 0; border:none; border-top:1px solid #E2E8F0;"/>
                     <div style="font-size:0.8rem; color:#1E293B; line-height:1.4;">
-                        <strong>• Academic Block 1:</strong> Reconfigure BMS timer to cut off central HVAC compressors at 20:30 on weekdays.<br/>
+                        <strong>• School of Engineering (SOE):</strong> Reconfigure BMS timer to cut off workshop HVAC & machinery contactors at 20:30.<br/>
                         <span style="color:#059669; font-weight:600;">Est. Savings: ₹42,500/mo • Instant ROI</span>
                     </div>
                 </div>
@@ -902,7 +924,7 @@ def main():
                     <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Low-cost maintenance & component fixes (&lt; ₹2,500 CAPEX)</div>
                     <hr style="margin:8px 0; border:none; border-top:1px solid #E2E8F0;"/>
                     <div style="font-size:0.8rem; color:#1E293B; line-height:1.4;">
-                        <strong>• Boys Hostel Block A:</strong> Replace jammed mechanical float valve and calibrate auto-shutoff pump sensors.<br/>
+                        <strong>• Boys Hostel Main Block (B2 Laundry):</strong> Replace high-pressure solenoid valves and calibrate sump level sensors.<br/>
                         <span style="color:#059669; font-weight:600;">Est. Savings: ₹32,400/mo • Payback: 1.4 Days</span>
                     </div>
                 </div>
@@ -915,7 +937,7 @@ def main():
                     <div style="font-size:0.75rem; color:#64748B; margin-top:2px;">Systems tuning & on-site composting</div>
                     <hr style="margin:8px 0; border:none; border-top:1px solid #E2E8F0;"/>
                     <div style="font-size:0.8rem; color:#1E293B; line-height:1.4;">
-                        <strong>• Central Canteen:</strong> Deploy organic food digester composter and enforce segregated 2-bin disposal.<br/>
+                        <strong>• Central Food Court & Canteen:</strong> Deploy organic food digester composter and enforce segregated kitchen disposal.<br/>
                         <span style="color:#059669; font-weight:600;">Est. Savings: ₹36,000/mo • Payback: 7 Days</span>
                     </div>
                 </div>
@@ -980,7 +1002,7 @@ def main():
         with arch_col2:
             st.markdown("##### Methodology & Validation")
             st.markdown(f"""
-            - **Multi-Domain Baseline Training**: A singular unified `RandomForestRegressor` trained across 30,000 records of Energy, Water, and Waste telemetry, capturing cross-resource interactions.
+            - **Multi-Domain Baseline Training**: A singular unified `RandomForestRegressor` trained across {len(raw_df):,} records of Energy, Water, and Waste telemetry, capturing cross-resource interactions.
             - **Feature Representation**: Categorical facility features (`building_id`, `building_type`, `facility_category`, `metric`) combined with diurnal cycle (`hour` 0-23) and continuous real-time headcount (`occupancy`).
             - **Empirical Accuracy (80/20 Baseline Test Split)**:
               - **Overall Singular Model**: $R^2 = {detector.metrics.get('overall', {}).get('r2', 0.9984):.4f}$
