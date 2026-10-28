@@ -28,7 +28,7 @@ from crew.recommendations import (
     WATER_CO2_G_PER_LITER,
     WASTE_CO2_KG_PER_KG,
 )
-from crew.llm_advisor import query_llm_advisor, check_freellm_health, DEFAULT_GEMINI_KEY
+from crew.llm_advisor import query_llm_advisor, check_freellm_health
 
 
 @st.cache_data(show_spinner="Consulting AI Engineering Advisor...")
@@ -287,7 +287,7 @@ def main():
         st.divider()
 
         st.markdown("#### AI Advisory Engine")
-        gemini_key = os.environ.get("GEMINI_API_KEY", DEFAULT_GEMINI_KEY)
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
         freellm_online = check_freellm_health(timeout=0.4)
         if gemini_key:
             st.success("Google Gemini AI Active (Live)")
