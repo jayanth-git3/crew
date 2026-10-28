@@ -3,9 +3,7 @@ Matches the locked IEEE hackathon data contract:
 Columns: building_id, building_name, building_type, occupancy, hour, metric, reading, known_inefficient
 """
 from __future__ import annotations
-import os
 from pathlib import Path
-import random
 from typing import List, Dict, Any
 import numpy as np
 import pandas as pd
@@ -13,52 +11,81 @@ import pandas as pd
 from crew.config import BUILDINGS
 
 
-def get_hourly_occupancy(building: Dict[str, Any], hour: int, rng: np.random.Generator) -> int:
-    """Calculates realistic occupancy given building type, hour of day, and capacity."""
+def get_hourly_occupancy(building: Dict[str, Any], hour: int, day: int, rng: np.random.Generator) -> int:
+    """Calculates realistic occupancy given building type, hour of day, weekday/weekend, and capacity."""
     b_type = building["building_type"]
     capacity = building["capacity"]
+    is_weekend = (day % 7) in (5, 6)
 
     if b_type == "academic":
-        if 8 <= hour <= 16:
-            ratio = rng.uniform(0.60, 0.95)
-        elif hour in (17, 18):
-            ratio = rng.uniform(0.15, 0.35)
-        elif hour in (7, 19, 20):
-            ratio = rng.uniform(0.02, 0.08)
+        if is_weekend:
+            # Low skeleton staff / weekend study groups
+            ratio = rng.uniform(0.01, 0.08) if 9 <= hour <= 16 else 0.0
         else:
-            ratio = rng.uniform(0.0, 0.01)
+            if 8 <= hour <= 16:
+                ratio = rng.uniform(0.60, 0.95)
+            elif hour in (17, 18):
+                ratio = rng.uniform(0.15, 0.35)
+            elif hour in (7, 19, 20):
+                ratio = rng.uniform(0.02, 0.08)
+            else:
+                ratio = rng.uniform(0.0, 0.01)
 
     elif b_type == "lab":
-        if 9 <= hour <= 17:
-            ratio = rng.uniform(0.50, 0.85)
-        elif hour in (8, 18, 19):
-            ratio = rng.uniform(0.10, 0.25)
+        if is_weekend:
+            # Occasional weekend project teams
+            ratio = rng.uniform(0.05, 0.18) if 10 <= hour <= 17 else 0.0
         else:
-            ratio = 0.0
+            if 9 <= hour <= 17:
+                ratio = rng.uniform(0.50, 0.85)
+            elif hour in (8, 18, 19):
+                ratio = rng.uniform(0.10, 0.25)
+            else:
+                ratio = 0.0
 
     elif b_type == "hostel":
-        if 0 <= hour <= 6:
-            ratio = rng.uniform(0.85, 0.98)
-        elif hour in (7, 8):
-            ratio = rng.uniform(0.60, 0.80)
-        elif 9 <= hour <= 16:
-            ratio = rng.uniform(0.05, 0.18)
-        elif 17 <= hour <= 21:
-            ratio = rng.uniform(0.50, 0.75)
-        else:  # 22, 23
-            ratio = rng.uniform(0.80, 0.95)
+        if is_weekend:
+            # High occupancy throughout day on weekends
+            if 0 <= hour <= 9:
+                ratio = rng.uniform(0.85, 0.98)
+            elif 10 <= hour <= 17:
+                ratio = rng.uniform(0.55, 0.75)
+            else:
+                ratio = rng.uniform(0.80, 0.96)
+        else:
+            if 0 <= hour <= 6:
+                ratio = rng.uniform(0.85, 0.98)
+            elif hour in (7, 8):
+                ratio = rng.uniform(0.60, 0.80)
+            elif 9 <= hour <= 16:
+                ratio = rng.uniform(0.05, 0.18)
+            elif 17 <= hour <= 21:
+                ratio = rng.uniform(0.50, 0.75)
+            else:  # 22, 23
+                ratio = rng.uniform(0.80, 0.95)
 
     elif b_type == "canteen":
-        if 7 <= hour <= 9:  # Breakfast
-            ratio = rng.uniform(0.35, 0.65)
-        elif 12 <= hour <= 14:  # Lunch rush
-            ratio = rng.uniform(0.70, 0.98)
-        elif 17 <= hour <= 20:  # Evening snacks & dinner
-            ratio = rng.uniform(0.40, 0.75)
-        elif 10 <= hour <= 11 or 15 <= hour <= 16:
-            ratio = rng.uniform(0.10, 0.25)
+        if is_weekend:
+            # Shifted brunch hours on weekends
+            if 9 <= hour <= 11:
+                ratio = rng.uniform(0.40, 0.70)
+            elif 13 <= hour <= 15:
+                ratio = rng.uniform(0.50, 0.80)
+            elif 18 <= hour <= 21:
+                ratio = rng.uniform(0.45, 0.75)
+            else:
+                ratio = 0.0
         else:
-            ratio = 0.0
+            if 7 <= hour <= 9:  # Breakfast
+                ratio = rng.uniform(0.35, 0.65)
+            elif 12 <= hour <= 14:  # Lunch rush
+                ratio = rng.uniform(0.70, 0.98)
+            elif 17 <= hour <= 20:  # Evening snacks & dinner
+                ratio = rng.uniform(0.40, 0.75)
+            elif hour in (10, 11, 15, 16):
+                ratio = rng.uniform(0.10, 0.25)
+            else:
+                ratio = 0.0
     else:
         ratio = rng.uniform(0.05, 0.50)
 
@@ -77,7 +104,7 @@ def calculate_reading(
     if metric == "energy":
         base = building["base_energy"]
         occ_rate = building["energy_per_occ"]
-        # Ambient temperature/sun factor during midday adds slight HVAC demand
+        # Ambient temperature adds slight HVAC demand during daytime peaks
         time_factor = 1.15 if 11 <= hour <= 15 else 1.0
         expected = (base + (occupancy * occ_rate)) * time_factor
     else:  # water
@@ -103,8 +130,11 @@ def calculate_reading(
     return round(float(actual), 2)
 
 
-def generate_campus_data(days: int = 7, seed: int = 42) -> pd.DataFrame:
+def generate_campus_data(days: int = 24, seed: int = 42) -> pd.DataFrame:
     """Generates synthetic campus resource telemetry strictly adhering to the IEEE data contract.
+
+    With default days=24 across 9 buildings, produces exactly:
+    24 days * 24 hours * 9 buildings * 2 metrics = 10,368 rows.
 
     Schema:
     - building_id: str
@@ -122,7 +152,7 @@ def generate_campus_data(days: int = 7, seed: int = 42) -> pd.DataFrame:
     for day in range(days):
         for hour in range(24):
             for b in BUILDINGS:
-                occ = get_hourly_occupancy(b, hour, rng)
+                occ = get_hourly_occupancy(b, hour, day, rng)
 
                 # Energy record
                 energy_val = calculate_reading(b, "energy", occ, hour, rng)
@@ -173,7 +203,6 @@ def save_dataset(df: pd.DataFrame, output_path: str = "data/campus_data.csv") ->
 
 
 if __name__ == "__main__":
-    data_df = generate_campus_data(days=7, seed=42)
+    data_df = generate_campus_data(days=24, seed=42)
     saved_to = save_dataset(data_df)
     print(f"Generated {len(data_df)} records saved to: {saved_to}")
-    print(data_df.head())
